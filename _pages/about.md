@@ -3,7 +3,7 @@ layout: about
 title: about
 permalink: /
 subtitle: 
-  <p>Principal Researcher, Waterloo Research Centre, Huawei Canada</p>
+  <p>Principal Researcher, Waterloo Research Center, Huawei Canada</p>
   <p>Contact jiayuan.zjy@gmail.com</p>
 
 profile:
@@ -14,12 +14,19 @@ profile:
     <p>Toronto, Canada</p>
 
 news: true # includes a list of news items
+publications: true
 selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false # includes social icons at the bottom of the page
 ---
 
-Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](http://reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
+Hi, I am Jiayuan Zhou, a principal researcher with Huawei Canada (Waterloo Research Center). My team and I currently focus on how to leverage LLM to assist practical OSS vulnerability management (e.g., OSS vulnerabilities early sensing, validation, explanation, evaluation, and patching).
 
-Put your address / P.O. box / other info right below your picture. You can also disable any of these elements by editing `profile` property of the YAML header of your `_pages/about.md`. Edit `_bibliography/papers.bib` and Jekyll will render your [publications page](/al-folio/publications/) automatically.
+I received my Ph.D. degree at Software Analysis and Intelligence (SAIL) Lab, Queen’s University, under the supervision of professor Ahmed E. Hassan and professor Shaowei Wang. My thesis is about studying the extrinsic rewards in open source software communities. For example, how to leverage bounties (i.e., the monetary incentive) to address GitHub issue reports, and what is the impact of bounty in Stack Overflow. And my thesis is about mining data from GitHub, Stack Overflow, and Bountysource.
 
-Link to your social media connections, too. This theme is set up to use [Font Awesome icons](https://fontawesome.com/) and [Academicons](https://jpswalsh.github.io/academicons/), like the ones below. Add your Facebook, Twitter, LinkedIn, Google Scholar, or just disable all of them.
+As a researcher, my research interests include intelligent vulnerability management, mining software repositories, extrinsic incentives in crowdsourced software engineering. 
+My work has been published in premier software engineering venues (e.g.,ICSE, ASE, FSE, IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, and Empirical Software Engineering). More information at:
+[google scholar](https://scholar.google.com/citations?hl=zh-CN&user=ySQkd5nCb0cC).
+
+I also spent two years working as a senior software developer in Alibaba Group and published three patents.
+
+
