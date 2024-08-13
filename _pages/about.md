@@ -3,8 +3,8 @@ layout: about
 title: about
 permalink: /
 subtitle: 
-  <p>Principal Researcher, Waterloo Research Center, Huawei Canada</p>
-  <p>Contact jiayuan.zjy@gmail.com</p>
+  <p>Principal Researcher, Software Engineering Application Technology Lab, Huawei Canada</p>
+  <p>jiayuan.zjy[at]gmail.com</p>
 
 profile:
   align: left
@@ -17,7 +17,6 @@ news: true # includes a list of news items
 publications: true
 selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false # includes social icons at the bottom of the page
-#commented: I lead a research team on OSS Vulnerability Management. Currently, my research focuses on how to leverage LLM to assist practical OSS vulnerability management (e.g., OSS vulnerabilities early sensing, validation, explanation, evaluation, and patching).
 ---
 
 Hi, I am Jiayuan Zhou, a principal researcher with Huawei Canada (Waterloo Research Center). I lead a research team to conduct and apply cutting-edge techniques to design and implement research protocols for improving supply chain security in open source. I also collaborate closely with global researchers and product teams to help them improve OSS asset management/OSS supply chain security and integrate our solutions into the product.
