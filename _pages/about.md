@@ -28,6 +28,6 @@ As a researcher, my research interests include intelligent vulnerability managem
 My work has been published in premier software engineering venues (e.g.,ICSE, ASE, FSE, IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, and Empirical Software Engineering). More information at:
 [google scholar](https://scholar.google.com/citations?hl=zh-CN&user=ySQkd5nCb0cC).
 
-I also spent two years working as a senior software developer in Alibaba Group and published three patents.
+I also spent two years working as a senior software developer in Alibaba Group and published four patents.
 
 
