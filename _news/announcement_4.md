@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper accepted by ICSE 2024: "Towards More Practical Automation of Vulnerability Assessment"
+Our paper was accepted by ICSE 2024: "Towards More Practical Automation of Vulnerability Assessment"

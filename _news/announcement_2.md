@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper accepted by ICSME 2024: "An Empirical Study of Automatic Program Repair Techniques for Injection Vulnerabilities"
+Our paper was accepted by ICSME 2024: "An Empirical Study of Automatic Program Repair Techniques for Injection Vulnerabilities"

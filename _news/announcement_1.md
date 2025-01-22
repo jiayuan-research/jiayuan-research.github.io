@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper accepted by ISSTA 2024: "Silent Taint-Style Vulnerability Fixes Identification"
+Our paper was accepted by ISSTA 2024: "Silent Taint-Style Vulnerability Fixes Identification"

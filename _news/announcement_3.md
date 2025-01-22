@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper accepted by FSE-Industry 2024: "Unveil the Mystery of Critical Software Vulnerabilities"
+Our paper was accepted by FSE-Industry 2024: "Unveil the Mystery of Critical Software Vulnerabilities"
