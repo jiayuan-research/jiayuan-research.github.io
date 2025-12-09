@@ -19,15 +19,19 @@ selected_papers: false # includes a list of papers marked as "selected={true}"
 social: false # includes social icons at the bottom of the page
 ---
 
-Hi, I am Jiayuan Zhou, a principal researcher with Huawei Canada (Software Engineering Application Technology Lab, Huawei Canada). I lead a research team to conduct and apply cutting-edge techniques to design and implement research protocols for improving supply chain security in open source. I also collaborate closely with global researchers and product teams to help them improve OSS asset management/OSS supply chain security and integrate our solutions into the product.
+I am a **Principal Research Scientist** at Huawei Canada, leading a research team focused on **AI-native software development** and **intelligent vulnerability management**. My team develops cutting-edge AI agent systems for automated software engineering, including the **Lingxi Agent framework**, which achieved **#2 globally on SWE-bench Verified** with a **74.6% resolution rate** and **#1 among open-source models**.
+
+I work closely with engineering teams to productionize AI agents for **long-horizon software engineering tasks**, including **cross-file bug fixing**, **repository-level issue resolution**, and **end-to-end feature development**, with **70-90% measured efficiency gains** across multiple product lines.
+
+I received my Ph.D. in Computer Science from the [SAIL(Software Analysis and Intelligence Lab )][https://sailresearch.github.io/sail-website/], Queen's University, Canada, under the supervision of [Prof. Ahmed E. Hassan](https://scholar.google.com/citations?user=9hwXx34AAAAJ) and [Prof. Shaowei Wang](https://sites.google.com/view/mambalab). My dissertation explored extrinsic incentives in open source communities through mining GitHub, Stack Overflow, and Bountysource data.
+
+**Research Interests:** AI agents for software engineering, LLM-based code generation, multi-agent collaboration, intelligent vulnerability management, mining software repositories.
+
+**Publications:** My work has appeared in premier software engineering venues including **ICSE**, **ASE**, **FSE**, **IEEE TSE**, and **EMSE**. [google scholar](https://scholar.google.com/citations?hl=zh-CN&user=ySQkd5nCb0cC).
+
+**Industry Experience:** Prior to Huawei, I was a Senior Software Engineer at **Alibaba Group**, where I served as the **founding engineer** of 1688's **One-Click Dropshipping (一件代发/一键代销)** system—a **full-stack, end-to-end platform** connecting B2B suppliers with millions of Taobao/Tmall merchants for automated order fulfillment and inventory-free retail operations. 
 
 
-I received my Ph.D. degree in Computer Science from Software Analysis and Intelligence Lab (SAIL Lab), Queen’s University, Canada under the supervision of professor Ahmed E. Hassan and professor Shaowei Wang. My thesis is about studying the extrinsic rewards in open source software communities. For example, how to leverage bounties (i.e., the monetary incentive) to address GitHub issue reports, and what is the impact of bounty in Stack Overflow. And my thesis is about mining data from GitHub, Stack Overflow, and Bountysource.
 
-As a researcher, my research interests include intelligent vulnerability management, mining software repositories, extrinsic incentives in crowdsourced software engineering. 
-My work has been published in premier software engineering venues (e.g.,ICSE, ASE, FSE, IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, and Empirical Software Engineering). More information at:
-[google scholar](https://scholar.google.com/citations?hl=zh-CN&user=ySQkd5nCb0cC).
-
-I also spent two years working as a senior software developer in Alibaba Group and published four patents.
-
+I hold **10+ patents** in software engineering and AI applications.
 
