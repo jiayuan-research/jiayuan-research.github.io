@@ -3,7 +3,7 @@ layout: about
 title: about
 permalink: /
 subtitle: 
-  <p>Principal Researcher</p>
+
   <p>jiayuan.zjy[at]gmail.com</p>
 
 profile:
