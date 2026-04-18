@@ -26,11 +26,11 @@ social: false # includes social icons at the bottom of the page
     margin-top: 0;
     margin-bottom: 0.75rem;
     font-style: italic;
-    color: #4b5563;
+    color: var(--global-text-color-light);
     font-size: 1rem;
     line-height: 1.4;
     padding-left: 0.8rem;
-    border-left: 3px solid #c5d4e3;
+    border-left: 3px solid var(--global-divider-color);
   }
   /* After the "lines I lead" intro + bullets, break out of the float so the
      synthesis/background paragraphs go full-width under the profile, not in

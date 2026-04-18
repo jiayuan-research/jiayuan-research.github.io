@@ -21,7 +21,7 @@ nav_order: 1
     max-width: 760px;
     margin: 0 auto 2.2rem auto;
     line-height: 1.65;
-    color: #2f3640;
+    color: var(--global-text-color);
   }
 
   /* ============================================
@@ -281,13 +281,25 @@ nav_order: 1
     font-style: italic;
   }
 
-  /* Loop-back note */
+  /* Feedback-loop visual: wide curved arrow under the 3 sub-boxes, going from
+     the rightmost box (Model & Loop Evolution) back to the leftmost box (Dev
+     Implicit Knowledge Mining) — the literal data flywheel. */
+  .feedback-loop {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .feedback-loop > svg {
+    display: block;
+    width: 100%;
+    height: 58px;
+  }
+  /* Loop-back note (text caption below the arrow) */
   .loop-note {
     text-align: center;
     font-size: 0.88rem;
     color: #e06b2a;
     font-style: italic;
-    margin: 0.9rem auto 0 auto;
+    margin: 0.15rem 0 0 0;
   }
 
   /* ============================================
@@ -309,15 +321,15 @@ nav_order: 1
     padding: 0.85rem 1.2rem;
     font-size: 1.02rem;
     font-weight: 600;
-    color: #5b6775;
+    color: var(--global-text-color-light);
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s;
     text-align: center;
   }
-  .tab-btn:hover { color: #1c2e4a; }
+  .tab-btn:hover { color: var(--global-theme-color); }
   .tab-btn.active {
-    color: #1c2e4a;
-    border-bottom-color: #1f5eb3;
+    color: var(--global-theme-color);
+    border-bottom-color: var(--global-theme-color);
   }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
@@ -338,7 +350,7 @@ nav_order: 1
   }
   .vuln-hero figcaption {
     font-style: italic;
-    color: #4b5563;
+    color: var(--global-text-color-light);
     font-size: 0.92rem;
     margin-top: 0.55rem;
     line-height: 1.4;
@@ -346,7 +358,8 @@ nav_order: 1
   .vuln-hero .img-credit {
     display: block;
     font-size: 0.72rem;
-    color: #9ca3af;
+    color: var(--global-text-color-light);
+    opacity: 0.7;
     font-style: normal;
     margin-top: 0.2rem;
   }
@@ -596,13 +609,19 @@ nav_order: 1
 
   </div>
 
-  <p class="loop-note">
-    <svg width="18" height="14" viewBox="0 0 20 14" style="vertical-align:middle;margin-right:4px;" aria-hidden="true">
-      <path d="M 18 2 Q 18 12 6 12" stroke="#e06b2a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-      <polygon points="2,12 8,9 8,15" fill="#e06b2a"/>
+  <div class="feedback-loop">
+    <svg viewBox="0 0 1000 70" preserveAspectRatio="none" aria-hidden="true">
+      <!-- Curve from bottom-center of the rightmost sub-box, dipping down, up to
+           bottom-center of the leftmost sub-box -->
+      <path d="M 833 4 C 833 68 167 68 167 17"
+            stroke="#e06b2a" stroke-width="2.5" fill="none" stroke-linecap="round" />
+      <!-- Arrowhead tip pointing up, into the bottom border of the leftmost sub-box -->
+      <polygon points="159,17 167,2 175,17" fill="#e06b2a" />
     </svg>
-    evolved knowledge feeds back into Dev Implicit Knowledge Mining &mdash; closing the data flywheel.
-  </p>
+    <p class="loop-note">
+      evolved knowledge feeds back into Dev Implicit Knowledge Mining &mdash; closing the data flywheel.
+    </p>
+  </div>
 
 </div> <!-- /#lingxi-area -->
 
