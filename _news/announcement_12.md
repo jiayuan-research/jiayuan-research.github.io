@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by ICSE'26: "Diffploit: Facilitating Cross-Version Exploit Migration for Open Source Library Vulnerabilities". See you in Brazil🇧🇷～
+Our paper was accepted by ICSE'26: "[Diffploit: Facilitating Cross-Version Exploit Migration for Open Source Library Vulnerabilities](/publications/#chen2026diffploit)". See you in Brazil🇧🇷～

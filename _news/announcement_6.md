@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper "An Empirical Study of Automatic Program Repair Techniques for Injection Vulnerabilities" was selected as **Best Student Paper** at ICSME'24!
+Our paper "[An Empirical Study of Automatic Program Repair Techniques for Injection Vulnerabilities](/publications/#Zhu2024APRInject)" was selected as **Best Student Paper** at ICSME'24!

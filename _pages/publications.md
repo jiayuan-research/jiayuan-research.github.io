@@ -9,6 +9,12 @@ nav_order: 2
 
 <!-- _pages/publications.md -->
 
+<style>
+  /* Offset scroll target so a paper entry reached via #bibkey anchor is not
+     hidden behind the fixed top navbar (~57px). */
+  .bibliography > li { scroll-margin-top: 5rem; }
+</style>
+
 <!-- Bibsearch Feature -->
 
 {% include bib_search.liquid %}

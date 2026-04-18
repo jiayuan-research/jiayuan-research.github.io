@@ -5,5 +5,5 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by MSR 2025: "From Industrial Practices to Academia: Uncovering the Gap in Vulnerability Research and Practice"
+Our paper was accepted by MSR 2025: "[From Industrial Practices to Academia: Uncovering the Gap in Vulnerability Research and Practice](/publications/#liu2025industrial2academia)"
 

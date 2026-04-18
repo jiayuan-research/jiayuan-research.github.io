@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by TOSEM: "An empirical study on vulnerability disclosure management of open source software systems"
+Our paper was accepted by TOSEM: "[An empirical study on vulnerability disclosure management of open source software systems](/publications/#liu2025disclosure)"

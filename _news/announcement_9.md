@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by FSE 2025: "One-for-All Does Not Work! Enhancing Vulnerability Detection by Mixture-of-Experts (MoE)"
+Our paper was accepted by FSE 2025: "[One-for-All Does Not Work! Enhancing Vulnerability Detection by Mixture-of-Experts (MoE)](/publications/#xu2025moe)"

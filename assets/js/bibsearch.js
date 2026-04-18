@@ -52,6 +52,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const updateInputField = () => {
     const hashValue = decodeURIComponent(window.location.hash.substring(1)); // Remove the '#' character
+
+    // If the hash matches a paper entry's element ID (e.g. a bibkey anchor like
+    // #liu2025disclosure), treat it as an anchor: clear any filter so the entry
+    // is visible, and scroll to the enclosing <li>. Otherwise fall through to
+    // the default filter-as-search behavior.
+    const anchor = hashValue ? document.getElementById(hashValue) : null;
+    const entry = anchor ? anchor.closest("li") : null;
+    if (entry && entry.parentElement.classList.contains("bibliography")) {
+      document.getElementById("bibsearch").value = "";
+      filterItems("");
+      requestAnimationFrame(() => entry.scrollIntoView({ block: "start" }));
+      return;
+    }
+
     document.getElementById("bibsearch").value = hashValue;
     filterItems(hashValue);
   };

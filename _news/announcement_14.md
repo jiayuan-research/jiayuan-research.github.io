@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by ISSTA 2026: "Lingxi: Repository-Level Issue Resolution Framework Enhanced by Procedural Knowledge Guided Scaling"
+Our paper was accepted by ISSTA 2026: "[Lingxi: Repository-Level Issue Resolution Framework Enhanced by Procedural Knowledge Guided Scaling](/publications/#yang2026lingxi)"

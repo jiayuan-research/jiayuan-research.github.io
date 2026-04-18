@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by TOSEM: "Detecting Protracted Vulnerabilities in Open Source Projects"
+Our paper was accepted by TOSEM: "[Detecting Protracted Vulnerabilities in Open Source Projects](/publications/#sridharkumar2026protracted)"

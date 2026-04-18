@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by FSE 2026 (Industry Track): "Mitigating Implicit Inconsistencies in Patch Porting"
+Our paper was accepted by FSE 2026 (Industry Track): "[Mitigating Implicit Inconsistencies in Patch Porting](/publications/#pan2026mip)"

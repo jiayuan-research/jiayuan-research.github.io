@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 550" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#333"/>
+    </marker>
+    <marker id="ain" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#888"/>
+    </marker>
+    <marker id="adashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#888"/>
+    </marker>
+  </defs>
+
+  <rect width="1100" height="550" fill="#ffffff"/>
+
+  <text x="550" y="32" text-anchor="middle" font-size="20" font-weight="700" fill="#1f3a5f">The Lingxi Data Flywheel</text>
+  <text x="550" y="56" text-anchor="middle" font-size="12" fill="#666" font-style="italic">Mining knowledge from development data and agent trajectories → guiding the harness → evolving the models</text>
+
+  <!-- ① Miner -->
+  <rect x="280" y="180" width="300" height="170" fill="#fff7e0" stroke="#a8870f" stroke-width="2" rx="8"/>
+  <text x="430" y="205" text-anchor="middle" font-size="15" font-weight="700" fill="#5a4100">① Lingxi Miner</text>
+  <text x="430" y="222" text-anchor="middle" font-size="11" fill="#7a5a0e" font-style="italic">Knowledge Extraction</text>
+  <rect x="300" y="232" width="260" height="40" fill="#ffffff" stroke="#b58d1c" stroke-width="1.2" rx="4"/>
+  <text x="430" y="256" text-anchor="middle" font-size="12" font-weight="600" fill="#333">Code-Repo Knowledge Mining</text>
+  <rect x="300" y="285" width="260" height="50" fill="#ffffff" stroke="#b58d1c" stroke-width="1.2" rx="4"/>
+  <text x="430" y="305" text-anchor="middle" font-size="12" font-weight="600" fill="#333">Development-Experience</text>
+  <text x="430" y="322" text-anchor="middle" font-size="12" font-weight="600" fill="#333">Knowledge Mining</text>
+
+  <!-- Inputs -->
+  <rect x="60" y="200" width="160" height="50" fill="#eeeeee" stroke="#555" rx="4"/>
+  <text x="140" y="220" text-anchor="middle" font-size="12" fill="#333">Source Code</text>
+  <text x="140" y="238" text-anchor="middle" font-size="12" fill="#333">+ Docs</text>
+  <line x1="220" y1="225" x2="280" y2="252" stroke="#888" stroke-width="1.5" marker-end="url(#ain)"/>
+
+  <rect x="60" y="275" width="160" height="60" fill="#eeeeee" stroke="#555" rx="4"/>
+  <text x="140" y="295" text-anchor="middle" font-size="12" fill="#333">Historical Issues,</text>
+  <text x="140" y="313" text-anchor="middle" font-size="12" fill="#333">Defects, MRs</text>
+  <line x1="220" y1="305" x2="280" y2="300" stroke="#888" stroke-width="1.5" marker-end="url(#ain)"/>
+
+  <!-- Knowledge artifact (between Miner and Agent) -->
+  <rect x="620" y="245" width="170" height="50" fill="#fff7e0" stroke="#a8870f" stroke-width="1" stroke-dasharray="4 3" rx="4"/>
+  <text x="705" y="265" text-anchor="middle" font-size="11" fill="#5a4100">Development &amp;</text>
+  <text x="705" y="282" text-anchor="middle" font-size="11" fill="#5a4100">Process Knowledge</text>
+  <line x1="580" y1="270" x2="620" y2="270" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ③ Code Agent -->
+  <rect x="830" y="200" width="220" height="170" fill="#d5eedd" stroke="#2a8f3e" stroke-width="2.5" rx="8"/>
+  <text x="940" y="225" text-anchor="middle" font-size="15" font-weight="700" fill="#1a5a25">③ Lingxi Code Agent</text>
+  <text x="940" y="245" text-anchor="middle" font-size="11" fill="#1a5a25" font-style="italic">Repository-level issue resolution</text>
+  <rect x="850" y="258" width="180" height="36" fill="#ffffff" stroke="#2a8f3e" stroke-width="1" rx="4"/>
+  <text x="940" y="281" text-anchor="middle" font-size="13" font-weight="700" fill="#1a5a25">#1 on SWE-bench Verified</text>
+  <text x="940" y="312" text-anchor="middle" font-size="11" fill="#1a5a25">Lingxi + MiniMax M2.5</text>
+  <text x="940" y="330" text-anchor="middle" font-size="10" fill="#1a5a25" font-style="italic">ISSTA 2026</text>
+  <text x="940" y="350" text-anchor="middle" font-size="10" fill="#1a5a25" font-style="italic">Open-source · Technical Report</text>
+
+  <line x1="790" y1="270" x2="830" y2="270" stroke="#333" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ④ Evolver (IN PROGRESS) -->
+  <rect x="830" y="75" width="220" height="90" fill="#f7f7f7" stroke="#888" stroke-width="2" stroke-dasharray="6 4" rx="8"/>
+  <text x="940" y="98" text-anchor="middle" font-size="15" font-weight="700" fill="#555">④ Lingxi Evolver</text>
+  <text x="940" y="118" text-anchor="middle" font-size="11" fill="#555" font-style="italic">Model evolution via</text>
+  <text x="940" y="133" text-anchor="middle" font-size="11" fill="#555" font-style="italic">distilled knowledge</text>
+  <rect x="870" y="140" width="140" height="20" fill="#f0e0a0" stroke="#a8870f" rx="3"/>
+  <text x="940" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#5a4100">⏳ IN PROGRESS</text>
+
+  <!-- Evolver → Miner -->
+  <path d="M 830 120 Q 580 70 430 175" stroke="#888" stroke-width="1.5" stroke-dasharray="6 4" fill="none" marker-end="url(#adashed)"/>
+
+  <!-- Code Agent → Trajectory Data -->
+  <path d="M 940 370 Q 940 410 780 440" stroke="#888" stroke-width="1.5" stroke-dasharray="6 4" fill="none" marker-end="url(#adashed)"/>
+
+  <!-- Trajectory Data box -->
+  <text x="650" y="410" text-anchor="middle" font-size="11" font-weight="700" fill="#5a4100">⏳ IN PROGRESS</text>
+  <rect x="520" y="420" width="260" height="55" fill="#f7f7f7" stroke="#888" stroke-width="1.5" stroke-dasharray="6 4" rx="6"/>
+  <text x="650" y="442" text-anchor="middle" font-size="12" font-weight="700" fill="#555">Agent Logs &amp; Trajectory Data</text>
+  <text x="650" y="460" text-anchor="middle" font-size="10" fill="#555" font-style="italic">(reasoning traces, tool interactions)</text>
+
+  <!-- Trajectory Data → Miner -->
+  <path d="M 520 445 Q 350 430 360 345" stroke="#888" stroke-width="1.5" stroke-dasharray="6 4" fill="none" marker-end="url(#adashed)"/>
+
+  <!-- Legend -->
+  <rect x="40" y="500" width="16" height="16" fill="#fff7e0" stroke="#a8870f"/>
+  <text x="62" y="513" font-size="10" fill="#333">Miner (knowledge extraction) — published</text>
+  <rect x="310" y="500" width="16" height="16" fill="#d5eedd" stroke="#2a8f3e"/>
+  <text x="332" y="513" font-size="10" fill="#333">Code Agent — published (ISSTA'26 · #1 SWE-bench)</text>
+  <rect x="690" y="500" width="16" height="16" fill="#f7f7f7" stroke="#888" stroke-dasharray="6 4"/>
+  <text x="712" y="513" font-size="10" fill="#333">Evolver &amp; Trajectory Loop — in progress</text>
+</svg>

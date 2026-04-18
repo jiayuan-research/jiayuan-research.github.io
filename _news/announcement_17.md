@@ -5,4 +5,4 @@ inline: true
 related_posts: false
 ---
 
-Our paper was accepted by ISSTA 2026: "Answer is Cheap, Show Me the Evidence! Augmenting Automated Vulnerability Assessment with Evidence"
+Our paper was accepted by ISSTA 2026: "[Answer is Cheap, Show Me the Evidence! Augmenting Automated Vulnerability Assessment with Evidence](/publications/#pan2026eava)"
