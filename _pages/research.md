@@ -322,6 +322,35 @@ nav_order: 1
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
+  /* ============================================
+     Hero figure above the vuln narrative
+     ============================================ */
+  .vuln-hero {
+    max-width: 760px;
+    margin: 0 auto 1.6rem auto;
+    text-align: center;
+  }
+  .vuln-hero img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .vuln-hero figcaption {
+    font-style: italic;
+    color: #4b5563;
+    font-size: 0.92rem;
+    margin-top: 0.55rem;
+    line-height: 1.4;
+  }
+  .vuln-hero .img-credit {
+    display: block;
+    font-size: 0.72rem;
+    color: #9ca3af;
+    font-style: normal;
+    margin-top: 0.2rem;
+  }
+
   /* Mobile fallback: collapse to single column, drop all connectors */
   @media (max-width: 780px) {
     .subs-row.cols-4, .subs-row.cols-3 { grid-template-columns: 1fr; }
@@ -351,6 +380,11 @@ nav_order: 1
 <!-- ================================================================== -->
 
 <div class="tab-panel active" id="tab-vuln">
+
+<figure class="vuln-hero">
+  <img src="/assets/img/VulnDisclosureLifecycle.png" alt="Conventional vs. proposed pre-emptive vulnerability patch cycles" />
+  <figcaption><strong>My research focus:</strong> close the pre-disclosure window — act before the attacker.<span class="img-credit">Diagram generated with Gemini.</span></figcaption>
+</figure>
 
 <p class="page-narrative">
   Under coordinated vulnerability disclosure, a vulnerability is typically <em>silently fixed</em> on the public repository weeks before its CVE is published &mdash; and attackers can infer the vulnerability from those silent commits long before defenders hear about it. In the <strong>CVE-2018-11776</strong> Apache Struts remote-code-execution case, a silent fix sat in the public repo for about <strong>two months</strong> before public disclosure; this is the same class of exposure window that contributed to the 2017 <strong>Equifax breach</strong> (~147.9M records). Starting from our ASE'21 <em>VulFixMiner</em> paper, our research line has pioneered <strong>proactive vulnerability sensing</strong> &mdash; modeling silent fix commits as the first public, inevitable signal of a hidden vulnerability, covering <strong>65%</strong> of silent fixes <strong>1&ndash;2 weeks</strong> ahead of CVE disclosure.
