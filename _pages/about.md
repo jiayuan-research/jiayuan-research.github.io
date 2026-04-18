@@ -20,6 +20,12 @@ social: false # includes social icons at the bottom of the page
 ---
 
 <style>
+  /* Narrow the profile column slightly and widen the gap between the photo
+     and the body text so the two columns breathe. */
+  @media (min-width: 576px) {
+    .post > article > .profile { width: 26%; }
+    .post > article > .profile.float-left { margin-right: 2rem; }
+  }
   /* Tighten the top of the body column so the tagline sits aligned with the
      profile image's top edge. */
   .post > article > .clearfix > .tagline {
