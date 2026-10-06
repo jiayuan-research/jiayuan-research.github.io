@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>document.documentElement.classList.add('js')</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STAIR · Reusing Past Repairs Through Hierarchical Trajectory Abstraction for Coding Agents</title>
+  <meta name="description" content="STAIR extracts repair recipes from successful repair trajectories, keeps each procedure at multiple granularities, and adapts the recipes that fit each repair stage into a plan for a new issue. 81.2% Pass@1 on SWE-bench Verified with MiniMax M2.5.">
+  <meta property="og:title" content="Reusing Past Repairs Through Hierarchical Trajectory Abstraction for Coding Agents">
+  <meta property="og:description" content="Keep each repair procedure at several levels of detail; select per repair stage.">
+  <meta property="og:type" content="article">
+  <link rel="alternate" hreflang="en" href="index.html">
+  <link rel="alternate" hreflang="zh-Hans" href="index.zh.html">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%232f5bd3'/%3E%3Cpath d='M5 18h14M5 18V14h5v-4h5V6h4' stroke='white' stroke-width='2.2' fill='none'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    /* =====================================================================
+       STAIR project page. House style (same language as the Lingxi page):
+       square thin-border boxes with corner ticks, mono uppercase tags,
+       Bricolage Grotesque + JetBrains Mono, light paper, one accent thread.
+       Fixed colour semantics:
+         cobalt  = STAIR / ours (granularity ramp: low → medium → high)
+         jade    = success / gained instances
+         ash     = baselines and other agents
+         rose    = regressions only
+       ===================================================================== */
+    :root {
+      --paper: #f7f6f2; --white: #ffffff;
+      --ink: #161c1a; --ink-2: #2b332f; --dim: #555d59; --faint: #7d8480;
+      --line: rgba(22,28,26,.14); --line-2: rgba(22,28,26,.24); --tickc: rgba(22,28,26,.5);
+      --acc: #2f5bd3; --acc-ink: #2446a8; --acc-soft: rgba(47,91,211,.08); --acc-line: rgba(47,91,211,.42);
+      --g-low: #b9c7f0; --g-med: #7d97e2; --g-high: #2f5bd3;
+      --jade: #2f8f6c; --jade-ink: #1f6b4f; --jade-soft: rgba(47,143,108,.09);
+      --ash: #b3b8b5; --ash-ink: #646c68; --base-ink: #3c4440;
+      --rose: #d2604f; --rose-ink: #a63d2e; --rose-soft: rgba(210,96,79,.1);
+      --sand-ink: #7f5d24;
+      --display: "Bricolage Grotesque", "Inter", -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --nav-h: 64px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: radial-gradient(900px 560px at 12% -6%, rgba(47,91,211,.06), transparent 62%), radial-gradient(900px 600px at 96% 6%, rgba(47,143,108,.05), transparent 64%), var(--paper);
+      font-family: var(--display); font-size: 16px; line-height: 1.6; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+    a { color: var(--acc-ink); }
+    code { font-family: var(--mono); font-size: .86em; color: var(--sand-ink); }
+    b, strong { font-weight: 600; color: var(--ink); }
+    sub { font-size: .7em; }
+    :is(a, button):focus-visible { outline: 2px solid var(--acc); outline-offset: 3px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .skip { position: absolute; left: -999px; top: 8px; z-index: 200; background: var(--ink); color: #fff; padding: 8px 12px; font-family: var(--mono); font-size: .8rem; }
+    .skip:focus { left: 16px; }
+    .js .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+    .js .reveal.visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .js .reveal { opacity: 1; transform: none; transition: none; } }
+    @media print { .js .reveal { opacity: 1 !important; transform: none !important; } .topbar, .rail { position: static !important; } .skip, .copy-btn, .hint { display: none !important; } }
+
+    /* ---------- placeholders: facts the paper does not state ---------- */
+    .tbd { display: inline-block; padding: 1px 8px; border: 1px dashed rgba(127,93,36,.6); background: rgba(233,213,138,.16); color: var(--sand-ink); font: 500 .74rem/1.5 var(--mono); letter-spacing: .04em; }
+
+    /* ---------- shared primitives ---------- */
+    .kicker { display: flex; align-items: center; gap: 10px; font: 500 .74rem/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--acc-ink); }
+    .kicker::before { content: ""; width: 7px; height: 7px; background: var(--acc); flex: none; }
+    .tag { display: block; font: 500 .7rem/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+    .tag .m { text-transform: none; letter-spacing: 0; }
+    .tag.hot { color: var(--acc-ink); } .tag.jade { color: var(--jade-ink); } .tag.ash { color: var(--ash-ink); } .tag.rose { color: var(--rose-ink); }
+    .box { position: relative; border: 1px solid var(--line); background: rgba(255,255,255,.72); padding: 22px 24px; min-width: 0; }
+    .box::before, .box::after { content: ""; position: absolute; width: 11px; height: 11px; border: 0 solid var(--tickc); pointer-events: none; }
+    .box::before { left: -1px; top: -1px; border-width: 2px 0 0 2px; }
+    .box::after { right: -1px; bottom: -1px; border-width: 0 2px 2px 0; }
+    .box.hot { border-color: var(--acc-line); background: linear-gradient(160deg, rgba(47,91,211,.07), rgba(47,91,211,.015)); }
+    .box.hot::before, .box.hot::after { border-color: var(--acc); }
+    .box.jade { border-color: rgba(47,143,108,.4); } .box.jade::before, .box.jade::after { border-color: var(--jade); }
+    .box.ash { background: rgba(255,255,255,.55); }
+    .box h3, .box h4 { margin: 8px 0 0; font: 700 1.18rem/1.25 var(--display); letter-spacing: -.015em; color: var(--ink); }
+    .box p { margin: 8px 0 0; color: var(--dim); font-size: .94rem; }
+    .claim { border-left: 3px solid var(--acc); background: var(--acc-soft); padding: 14px 20px; font-size: 1.08rem; line-height: 1.5; color: var(--ink); }
+    .claim .tag { margin-bottom: 4px; color: var(--acc-ink); }
+    .arr { color: var(--acc); font-family: var(--mono); }
+
+    /* ---------- topbar (narrow screens) ---------- */
+    .topbar { position: fixed; z-index: 100; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 40px;
+      background: rgba(247,246,242,.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid transparent; font: 400 .74rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; transition: background .3s, border-color .3s; }
+    .topbar.scrolled { background: rgba(247,246,242,.92); border-bottom-color: var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; white-space: nowrap; }
+    .brand b { font-weight: 700; letter-spacing: .14em; }
+    .mark { display: inline-block; width: 20px; height: 20px; flex: none; }
+    .nav { display: flex; gap: 22px; align-items: center; }
+    .nav a { color: var(--dim); text-decoration: none; } .nav a:hover { color: var(--acc-ink); }
+    @media (max-width: 960px) { .topbar { padding: 12px 20px; } .nav { gap: 14px; } }
+    @media (max-width: 640px) { .nav .opt { display: none; } }
+
+    /* ---------- left rail (wide screens) ---------- */
+    .rail { display: none; }
+    @media (min-width: 1200px) {
+      body { padding-left: 224px; }
+      .topbar { display: none; }
+      .rail { display: flex; flex-direction: column; position: fixed; z-index: 90; left: 0; top: 0; bottom: 0; width: 224px; padding: 30px 22px 24px 28px; border-right: 1px solid var(--line); background: rgba(247,246,242,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); overflow-y: auto; }
+      .rbrand { display: flex; gap: 12px; align-items: center; color: var(--ink); text-decoration: none; margin-bottom: 30px; }
+      .rbrand .mark { width: 30px; height: 30px; }
+      .rbrand b { display: block; font-size: 1.12rem; letter-spacing: .12em; } .rbrand small { display: block; margin-top: 2px; font: 400 .62rem var(--mono); letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
+      .rail ol { list-style: none; margin: 0; padding: 0; }
+      .rail > ol > li { margin-bottom: 4px; }
+      .rail a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--dim); text-decoration: none; font-size: .9rem; line-height: 1.3; }
+      .rail > ol > li > a { font-weight: 600; color: var(--ink-2); }
+      .rail a i { font: 500 .66rem var(--mono); font-style: normal; color: var(--faint); margin-right: 8px; letter-spacing: .06em; }
+      .rail ol ol a { font-size: .8rem; padding: 3px 0 3px 30px; }
+      .rail a:hover { color: var(--acc-ink); }
+      .rail a.on { color: var(--acc-ink); border-left-color: var(--acc); }
+      .rail a.on i { color: var(--acc-ink); }
+      .rlinks { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 18px; }
+      .rlinks a { padding: 6px 10px; border: 1px solid var(--line-2); font: 500 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+      .rlinks .tbd { font-size: .62rem; }
+    }
+
+    /* ---------- layout ---------- */
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 40px; }
+    @media (min-width: 1200px) { .wrap { max-width: 1060px; } }
+    @media (max-width: 960px) { .wrap { padding: 0 20px; } }
+    .section { padding-top: 72px; padding-bottom: 24px; scroll-margin-top: var(--nav-h); }
+    @media (max-width: 960px) { .section { padding-top: 52px; padding-bottom: 16px; } }
+    .section h2 { margin: 12px 0 14px; font: 700 clamp(1.65rem, 3.2vw, 2.35rem)/1.1 var(--display); letter-spacing: -.03em; }
+    .section h2 em, h3 em, h4 em { font-style: normal; color: var(--acc); }
+    .prose p { margin: 0 0 12px; font-size: 1.04rem; color: var(--ink-2); }
+    .prose p.lede { font-size: 1.14rem; color: var(--ink); }
+    .prose > :last-child { margin-bottom: 0; }
+    .shead + * { margin-top: 26px; }
+    .phead + * { margin-top: 20px; }
+    .block { margin-top: 22px; }
+    .block-h { margin: 56px 0 14px; scroll-margin-top: var(--nav-h); }
+    .block-h h3 { margin: 10px 0 0; font: 700 clamp(1.25rem, 2.3vw, 1.6rem)/1.2 var(--display); letter-spacing: -.02em; }
+    .cap { margin: 12px 0 0; font-size: .9rem; color: var(--dim); }
+    .note { margin: 12px 0 0; font: 400 .74rem/1.65 var(--mono); color: var(--faint); }
+    .read { margin-top: 16px; }
+    .read p { margin: 0 0 10px; color: var(--ink-2); }
+    .read p .tag { display: inline; margin-right: 8px; color: var(--acc-ink); }
+    .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .hint { display: none; margin-top: 8px; text-align: center; font: 400 .68rem var(--mono); color: var(--faint); }
+    @media (max-width: 760px) { .hint { display: block; } }
+    .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+
+    /* ---------- hero ---------- */
+    .hero { padding-top: 124px; padding-bottom: 30px; }
+    @media (min-width: 1200px) { .hero { padding-top: 64px; } }
+    @media (max-width: 960px) { .hero { padding-top: 96px; } }
+    .hero h1 { margin: 16px 0 14px; font: 800 clamp(2.8rem, 6.4vw, 4.6rem)/1 var(--display); letter-spacing: -.02em; }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 44px; align-items: start; }
+    @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; gap: 28px; } }
+    .ptitle { margin: 0 0 14px; font: 600 clamp(1.1rem, 2vw, 1.38rem)/1.3 var(--display); color: var(--ink-2); letter-spacing: -.01em; }
+    .hsub { margin: 0 0 18px; font-size: 1.04rem; color: var(--ink-2); }
+    .authors { margin: 0 0 4px; font-size: .98rem; color: var(--ink); }
+    .authors sup, .affils sup { font: 500 .65em var(--mono); color: var(--acc-ink); }
+    .affils { margin: 0 0 20px; font: 400 .76rem/1.8 var(--mono); color: var(--dim); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid var(--line-2); background: #fff; color: var(--ink); text-decoration: none; font: 500 .74rem/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .btn:hover { border-color: var(--acc); color: var(--acc-ink); }
+    .btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; } .btn.primary:hover { background: #000; color: #fff; }
+    .btn.off { border-color: var(--line); color: var(--faint); background: rgba(255,255,255,.5); cursor: default; }
+    .btn.off:hover { border-color: var(--line); color: var(--faint); }
+    @media (max-width: 360px) { .actions { gap: 5px; } .btn { padding: 9px 8px; letter-spacing: .02em; } }
+    .ledger .big { display: flex; align-items: baseline; gap: 6px; margin: 10px 0 2px; }
+    .ledger .big b { font: 800 4rem/1 var(--display); letter-spacing: -.04em; color: var(--acc); }
+    .ledger .big span { font: 500 .9rem var(--mono); color: var(--dim); }
+    .ledger p { margin: 4px 0 14px; font-size: .92rem; }
+    .ledger dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
+    .ledger dl div { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+    .ledger dl div:nth-child(odd) { border-right: 1px solid var(--line); }
+    .ledger dl div:nth-child(even) { padding-left: 12px; }
+    .ledger dt { font-size: .76rem; line-height: 1.35; color: var(--dim); }
+    .ledger dd { margin: 4px 0 0; font: 600 .95rem/1.3 var(--mono); color: var(--ink); }
+    .ledger dd.a { color: var(--acc-ink); }
+    @media (min-width: 961px) and (max-width: 1100px) { .ledger dl { grid-template-columns: 1fr; } .ledger dl div:nth-child(odd) { border-right: 0; } .ledger dl div:nth-child(even) { padding-left: 0; } }
+    @media (max-width: 400px) { .ledger dl { grid-template-columns: 1fr; } .ledger dl div:nth-child(odd) { border-right: 0; } .ledger dl div:nth-child(even) { padding-left: 0; } }
+    .takehome { margin-top: 28px; }
+
+    /* ---------- 01 problem: two contrast boxes ---------- */
+    .contrast { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    @media (max-width: 820px) { .contrast { grid-template-columns: 1fr; } }
+    .contrast .box { display: flex; flex-direction: column; }
+    .ex { margin-top: auto; padding-top: 14px; }
+    .ex-in { padding-top: 12px; border-top: 1px dashed var(--line-2); }
+    .exh { display: block; margin-bottom: 8px; font: 500 .62rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .chip { padding: 3px 9px; border: 1px solid var(--line-2); background: #fff; font-size: .86rem; color: var(--ink-2); }
+    .chips.seq { list-style: none; margin: 0; padding: 0; counter-reset: c; }
+    .chips.seq .chip { counter-increment: c; }
+    .chips.seq .chip::before { content: counter(c); margin-right: 7px; font: 600 .7rem var(--mono); color: var(--faint); }
+    .qline { margin: 0; padding: 8px 12px; border-left: 3px solid var(--g-high); background: var(--acc-soft); font-size: .92rem; color: var(--ink); }
+    .question { margin-top: 16px; }
+
+    /* ---------- 02 method ---------- */
+    .figure { margin: 0; padding: 18px; }
+    .figwrap { position: relative; min-width: 680px; }
+    .figwrap img { display: block; width: 100%; height: auto; }
+    .pbadge { position: absolute; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; background: var(--ink); color: #fff; text-decoration: none; font: 500 .66rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    .pbadge b { display: grid; place-items: center; width: 18px; height: 18px; background: var(--acc); color: #fff; font-weight: 700; }
+    .pbadge:hover { background: var(--acc-ink); }
+    .phase { margin-top: 56px; scroll-margin-top: var(--nav-h); }
+    .phase h3.ph { margin: 10px 0 10px; font: 700 clamp(1.35rem, 2.6vw, 1.85rem)/1.15 var(--display); letter-spacing: -.025em; }
+    .phase .kicker::before { display: none; }
+    .phase .kicker b { display: inline-grid; place-items: center; width: 18px; height: 18px; background: var(--acc); color: #fff; font-weight: 700; letter-spacing: 0; }
+    .math { font-family: var(--mono); font-size: .9em; color: var(--ink); white-space: nowrap; }
+
+    /* stage strip: one trajectory, three segments */
+    .tstrip { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 18px; align-items: center; }
+    .tstrip .lab { font: 500 .68rem/1.35 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .segs { display: grid; grid-template-columns: 1fr 1.2fr 1.4fr; gap: 4px; }
+    .segs span { padding: 7px 10px; border: 1px solid var(--line-2); background: #fff; font-size: .88rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .segs span i { font: 500 .78rem var(--mono); font-style: normal; color: var(--acc-ink); margin-right: 6px; }
+    .segs span.on { border-color: var(--acc-line); background: var(--acc-soft); }
+    .tstrip .sub { grid-column: 2; margin: 0; font-size: .86rem; color: var(--dim); }
+    @media (max-width: 700px) { .tstrip { grid-template-columns: 1fr; } .tstrip .sub { grid-column: 1; } .segs { grid-template-columns: 1fr; } }
+
+    /* granularity ladder */
+    .ladder { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) 46px; gap: 0 14px; }
+    .rungs { display: grid; gap: 0; min-width: 0; }
+    .rung { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; }
+    .rung .lv b { display: block; font: 700 .72rem/1.3 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink); }
+    .rung .lv span { display: block; margin-top: 2px; font-size: .8rem; line-height: 1.35; color: var(--dim); }
+    .rung .lv i { display: inline-block; width: 10px; height: 10px; margin-right: 7px; vertical-align: -1px; }
+    .node { padding: 10px 14px; border: 1px solid var(--line-2); background: #fff; font-size: .95rem; color: var(--ink); }
+    .node small { display: block; margin-bottom: 2px; font: 500 .62rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .rung.high .node { border-left: 4px solid var(--g-high); }
+    .rung.med .node { border-left: 4px solid var(--g-med); }
+    .rung.low .chips .chip { border-left: 4px solid var(--g-low); padding: 3px 8px; font-size: .84rem; }
+    .rung.low .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .rung.low .chips .chip { line-height: 1.3; padding: 6px 8px; }
+    @media (max-width: 1000px) { .rung.low .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .rung.src .node { background: rgba(22,28,26,.03); border-style: dashed; color: var(--ink-2); }
+    .op { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; }
+    .op span { position: relative; margin-left: 22px; padding: 8px 0 8px 18px; border-left: 2px solid var(--acc); font: 500 .68rem/1.4 var(--mono); letter-spacing: .06em; color: var(--acc-ink); }
+    .op span::after { content: ""; position: absolute; left: -6px; top: 0; border: 5px solid transparent; border-bottom: 7px solid var(--acc); border-top: 0; }
+    .op span:first-child { border: 0; padding: 0; margin: 0; } .op span:first-child::after { display: none; }
+    .gaxis { position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 2px 0; }
+    .gaxis::before { content: ""; position: absolute; top: 18px; bottom: 18px; left: 50%; width: 4px; margin-left: -2px; background: linear-gradient(var(--g-high), var(--g-low)); }
+    .gaxis span { position: relative; z-index: 1; writing-mode: vertical-rl; transform: rotate(180deg); padding: 6px 0; background: #fff; font: 500 .62rem/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    @media (max-width: 700px) {
+      .ladder { grid-template-columns: 1fr; } .gaxis { display: none; }
+      .rung, .op { grid-template-columns: 1fr; gap: 6px; } .op span { margin-left: 8px; } .op > :first-child { display: none; }
+    }
+    .fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin-top: 22px; border-top: 1px solid var(--line); }
+    .fields > div { padding: 12px 14px 4px 0; min-width: 0; }
+    .fields > div + div { padding-left: 14px; border-left: 1px solid var(--line); }
+    .fields b { display: block; font: 600 .72rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--acc-ink); }
+    .fields span { display: block; margin-top: 4px; font-size: .88rem; line-height: 1.45; color: var(--ink-2); }
+    @media (max-width: 760px) { .fields { grid-template-columns: 1fr 1fr; } .fields > div:nth-child(3) { padding-left: 0; border-left: 0; } }
+    .fieldnote { margin: 12px 0 0; font-size: .9rem; color: var(--dim); }
+    .prompts { display: grid; grid-template-columns: minmax(0, 1.46fr) minmax(0, 1.277fr); gap: 16px; align-items: stretch; }
+    .prompts figure { margin: 0; padding: 16px 16px 14px; display: flex; flex-direction: column; }
+    .prompts img { display: block; width: 100%; height: auto; margin-top: 10px; }
+    .prompts figcaption { margin-top: auto; padding-top: 10px; font-size: .86rem; color: var(--dim); }
+    @media (max-width: 760px) { .prompts { grid-template-columns: 1fr; } .prompts img { min-width: 520px; } }
+
+    /* phase 2: issue → recipes → plan */
+    .p2 { display: grid; grid-template-columns: minmax(0, .9fr) 28px minmax(0, 1.15fr) 28px minmax(0, 1.05fr); align-items: stretch; }
+    .p2 > .box { padding: 18px 18px; }
+    .p2 .to { display: grid; place-items: center; color: var(--acc); font: 500 1.5rem var(--mono); }
+    .p2 .issue { font-weight: 600; font-size: 1.02rem; color: var(--ink); margin: 6px 0 0; }
+    .p2 ol.steps { list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px dashed var(--line-2); display: grid; gap: 8px; counter-reset: s; }
+    .p2 ol.steps li { position: relative; padding-left: 26px; font-size: .88rem; line-height: 1.4; color: var(--ink-2); counter-increment: s; }
+    .p2 ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 17px; height: 17px; background: var(--ink-2); color: #fff; font: 700 .62rem/17px var(--mono); text-align: center; }
+    .rcp { margin-top: 8px; padding: 8px 11px; border: 1px solid var(--line-2); background: #fff; }
+    .rcp:first-of-type { margin-top: 10px; }
+    .rcp b { font: 600 .74rem var(--mono); color: var(--ink); }
+    .rcp em { font: 500 .66rem var(--mono); font-style: normal; letter-spacing: .06em; text-transform: uppercase; margin-left: 6px; padding: 1px 6px; }
+    .rcp em.high { background: var(--g-high); color: #fff; } .rcp em.med { background: var(--g-med); color: #fff; } .rcp em.low { background: var(--g-low); color: var(--ink); }
+    .rcp span { display: block; margin-top: 3px; font-size: .88rem; line-height: 1.4; color: var(--dim); }
+    .plan { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; counter-reset: p; }
+    .plan li { position: relative; padding: 8px 11px 8px 36px; border: 1px solid var(--acc-line); background: #fff; font-size: .9rem; line-height: 1.4; color: var(--ink); counter-increment: p; }
+    .plan li::before { content: counter(p); position: absolute; left: 10px; top: 9px; width: 17px; height: 17px; background: var(--acc); color: #fff; font: 700 .62rem/17px var(--mono); text-align: center; }
+    .plan li i { font: 500 .72rem var(--mono); font-style: normal; color: var(--acc-ink); white-space: nowrap; }
+    .plan li.more { border-style: dashed; color: var(--faint); padding-left: 11px; } .plan li.more::before { display: none; }
+    .p2note { margin: 12px 0 0; font-size: .88rem; color: var(--dim); }
+    @media (max-width: 900px) { .p2 { grid-template-columns: 1fr; } .p2 .to { padding: 4px 0; transform: rotate(90deg); } }
+
+    /* phase 3: plans into the three repair stages */
+    .p3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 34px; position: relative; }
+    .p3 .box { padding: 16px 18px; }
+    .p3 .box + .box::after { box-shadow: none; }
+    .p3 .stg + .stg .conn { display: block; }
+    .p3 .conn { display: none; position: absolute; left: -30px; top: 50%; width: 26px; border-top: 2px solid var(--acc); }
+    .p3 .conn::after { content: ""; position: absolute; right: -2px; top: -6px; border: 5px solid transparent; border-left: 7px solid var(--acc); }
+    .p3 .pin { display: inline-block; margin-top: 10px; padding: 2px 8px; background: var(--acc); color: #fff; font: 600 .74rem var(--mono); }
+    .p3 p { font-size: .92rem; }
+    @media (max-width: 820px) { .p3 { grid-template-columns: 1fr; gap: 10px; } .p3 .conn { display: none !important; } }
+    .scaf { margin-top: 16px; }
+    .scaf .box p code { font-size: .82em; }
+
+    /* ---------- 03 results ---------- */
+    .setup { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .setup span { padding: 5px 10px; border: 1px solid var(--line-2); background: rgba(255,255,255,.7); font: 500 .7rem/1.3 var(--mono); color: var(--ink-2); }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 10px; font: 400 .7rem var(--mono); color: var(--dim); }
+    .legend i { display: inline-block; width: 11px; height: 11px; margin-right: 6px; vertical-align: -1px; border-radius: 50%; }
+    .legend i.sq { border-radius: 0; }
+    .chart { padding: 20px 22px 14px; }
+
+    /* RQ1 dot plot */
+    .dp-g + .dp-g { margin-top: 10px; }
+    .dp-gh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 0 4px; border-bottom: 1px solid var(--line-2); font-weight: 700; font-size: .98rem; }
+    .dp-gh span { font: 400 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+    .dp-row, .dp-axis { display: grid; grid-template-columns: minmax(0, 34%) minmax(0, 1fr); gap: 18px; align-items: center; }
+    .dp-row { min-height: 44px; border-bottom: 1px solid rgba(22,28,26,.05); }
+    .dp-lab { font-size: .94rem; color: var(--dim); line-height: 1.3; }
+    .dp-lab b { color: var(--ink-2); font-weight: 600; } .dp-lab small { display: block; font: 400 .66rem var(--mono); color: var(--faint); letter-spacing: .03em; }
+    .dp-track { position: relative; height: 26px; margin-right: 58px; background: repeating-linear-gradient(90deg, rgba(22,28,26,.07) 0 1px, transparent 1px 25%); }
+    .dp-dot { position: absolute; top: 6px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ash); }
+    .dp-val { position: absolute; top: 3px; margin-left: 14px; font: 500 .88rem var(--mono); color: var(--dim); white-space: nowrap; }
+    .dp-seg { position: absolute; top: 12px; height: 2px; background: var(--acc); }
+    .dp-gain { position: absolute; top: -9px; transform: translateX(-50%); font: 600 .7rem var(--mono); color: var(--acc-ink); white-space: nowrap; background: rgba(255,255,255,.9); padding: 0 3px; }
+    .dp-row.base .dp-dot { background: var(--base-ink); } .dp-row.base .dp-lab b { color: var(--ink); }
+    .dp-row.ours .dp-dot { background: var(--acc); width: 16px; height: 16px; margin-left: -8px; top: 5px; }
+    .dp-row.ours .dp-val { color: var(--acc-ink); font-weight: 700; } .dp-row.ours .dp-lab b { color: var(--acc-ink); font-weight: 700; }
+    .dp-axis { border: 0; }
+    .dp-ticks { position: relative; height: 30px; margin-right: 58px; border-top: 1px solid var(--line-2); font: 400 .7rem var(--mono); color: var(--dim); }
+    .dp-ticks span { position: absolute; top: 6px; transform: translateX(-50%); }
+    .dp-axis .dp-lab { text-align: right; font: 400 .66rem var(--mono); letter-spacing: .06em; color: var(--faint); }
+    @media (max-width: 640px) { .dp-row, .dp-axis { grid-template-columns: 1fr; gap: 2px; padding: 6px 0; } .dp-row.ours .dp-track { margin-top: 14px; } .dp-axis .dp-lab { display: none; } .dp-track, .dp-ticks { margin-right: 50px; } }
+    .callouts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    @media (max-width: 760px) { .callouts { grid-template-columns: 1fr; } }
+    .callout { display: flex; align-items: center; gap: 18px; padding: 16px 20px; }
+    .callout .bign { font: 800 2.3rem/1 var(--display); letter-spacing: -.035em; color: var(--acc); white-space: nowrap; }
+    .callout .bign.ink { color: var(--ink); }
+    .callout .txt { font-size: .95rem; color: var(--dim); line-height: 1.4; }
+    .callout .txt b { display: block; }
+
+    /* RQ2 metric pairs */
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+    .metric { padding: 4px 22px 6px; min-width: 0; }
+    .metric:first-child { padding-left: 0; } .metric:last-child { padding-right: 0; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric h4 { margin: 6px 0 12px; font: 700 1.05rem/1.2 var(--display); }
+    .hb { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; margin-top: 8px; }
+    .hb small { grid-column: 1 / -1; font: 400 .7rem var(--mono); color: var(--dim); }
+    .hb .bar { display: block; height: 14px; background: rgba(22,28,26,.06); }
+    .hb .bar i { display: block; height: 100%; background: var(--ash); }
+    .hb.ours .bar i { background: var(--acc); }
+    .hb b { font: 600 .88rem var(--mono); color: var(--ink-2); white-space: nowrap; }
+    .hb.ours b { color: var(--acc-ink); }
+    .delta { margin-top: 12px; font: 600 .82rem var(--mono); color: var(--acc-ink); }
+    .delta span { font-weight: 400; color: var(--dim); }
+    @media (max-width: 820px) { .metrics { grid-template-columns: 1fr; } .metric { padding: 12px 0 !important; border-left: 0 !important; } .metric + .metric { border-top: 1px solid var(--line); } }
+
+    /* RQ3 */
+    .nets { display: grid; gap: 14px; }
+    .net { display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr) 72px; gap: 16px; align-items: center; }
+    .net .nl { font-size: .94rem; line-height: 1.3; color: var(--ink-2); } .net .nl b { display: block; } .net .nl small { font: 400 .68rem var(--mono); color: var(--dim); }
+    .div { display: grid; grid-template-columns: minmax(0, 12fr) minmax(0, 45fr); }
+    .div .l { display: flex; justify-content: flex-end; border-right: 2px solid var(--ink-2); }
+    .div .r { display: flex; }
+    .div i { display: flex; align-items: center; height: 28px; font: 600 .8rem var(--mono); font-style: normal; color: #fff; white-space: nowrap; }
+    .div .l i { justify-content: flex-start; padding-left: 6px; background: var(--rose); }
+    .div .r i { justify-content: flex-end; padding-right: 8px; background: var(--jade); }
+    .net .nv { font: 700 1.05rem var(--mono); color: var(--jade-ink); white-space: nowrap; }
+    .net .nv small { display: block; font: 400 .64rem var(--mono); color: var(--dim); }
+    .divax { display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr) 72px; gap: 16px; margin-top: 2px; font: 400 .66rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+    .divax > div { display: grid; grid-template-columns: minmax(0, 12fr) minmax(0, 45fr); }
+    .divax .l { text-align: right; padding-right: 8px; color: var(--rose-ink); } .divax .r { padding-left: 8px; color: var(--jade-ink); }
+    @media (max-width: 640px) { .net, .divax { grid-template-columns: minmax(0, 1fr) 56px; } .net .nl { grid-column: 1 / -1; } .divax > :first-child { display: none; } .divax .l, .divax .r { white-space: nowrap; } }
+    .cats { margin-top: 4px; }
+    .cat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+    .cat:first-of-type { border-top: 0; }
+    .cat h4 { margin: 0; font: 700 1.04rem/1.25 var(--display); }
+    .cat p { margin: 4px 0 0; font-size: .9rem; color: var(--dim); }
+    .cat .bars { display: grid; gap: 8px; }
+    .gb { display: grid; grid-template-columns: minmax(0, 1fr) 76px; gap: 10px; align-items: center; }
+    .gb .bar { display: block; height: 16px; background: rgba(22,28,26,.05); }
+    .gb .bar i { display: block; height: 100%; }
+    .gb.s .bar i { background: var(--acc); } .gb.m .bar i { background: var(--g-low); border: 1px solid var(--acc); }
+    .gb b { font: 600 .84rem var(--mono); color: var(--ink-2); white-space: nowrap; }
+    .gb.top b { color: var(--acc-ink); }
+    @media (max-width: 760px) { .cat { grid-template-columns: 1fr; gap: 10px; } }
+    .reg { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 9fr); margin-top: 12px; }
+    .reg > div { padding: 0 16px 0 0; min-width: 0; }
+    .reg > div + div { padding: 0 0 0 16px; border-left: 1px solid var(--line); }
+    .reg .seg { display: flex; align-items: center; height: 30px; padding: 0 10px; margin: 0 -16px 10px 0; font: 600 .82rem var(--mono); color: #fff; background: var(--rose); white-space: nowrap; }
+    .reg > div + div .seg { margin: 0 0 10px -16px; padding-left: 26px; background: var(--rose-soft); color: var(--rose-ink); border: 1px solid rgba(210,96,79,.5); }
+    .reg h4 { margin: 0; font: 700 1rem/1.3 var(--display); }
+    .reg p { margin: 4px 0 0; font-size: .9rem; color: var(--dim); }
+    @media (max-width: 640px) { .reg { grid-template-columns: 1fr; gap: 14px; } .reg > div, .reg > div + div { padding: 0; border: 0; } .reg .seg, .reg > div + div .seg { margin: 0 0 8px; padding-left: 10px; } }
+    .subh { margin: 0 0 12px; }
+
+    /* RQ4 ablation */
+    .abl-row { display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr) 176px; gap: 16px; align-items: center; min-height: 46px; border-bottom: 1px solid rgba(22,28,26,.06); }
+    .abl-row:last-child { border-bottom: 0; }
+    .abl-lab { font-size: .95rem; color: var(--ink-2); line-height: 1.3; } .abl-lab small { display: block; font: 400 .66rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+    .abl-row .bar { display: block; height: 18px; background: repeating-linear-gradient(90deg, rgba(22,28,26,.08) 0 1px, transparent 1px 20%), rgba(22,28,26,.03); }
+    .abl-row .bar i { display: block; height: 100%; }
+    .abl-v { font: 600 .9rem var(--mono); color: var(--ink-2); white-space: nowrap; }
+    .abl-v span { margin-left: 8px; font-weight: 500; color: var(--rose-ink); }
+    .abl-row.full .abl-lab { color: var(--acc-ink); font-weight: 700; } .abl-row.full .abl-v { color: var(--acc-ink); }
+    .abl-ax { display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr) 176px; gap: 16px; }
+    .abl-ax div { position: relative; height: 22px; font: 400 .7rem var(--mono); color: var(--dim); }
+    .abl-ax div span { position: absolute; top: 4px; transform: translateX(-50%); }
+    @media (max-width: 640px) { .abl-row { grid-template-columns: minmax(0, 1fr) 150px; gap: 4px 10px; padding: 6px 0; } .abl-lab { grid-column: 1 / -1; } .abl-ax { grid-template-columns: minmax(0, 1fr) 150px; gap: 10px; } .abl-ax > :first-child { display: none; } }
+
+    /* ---------- 04 scope ---------- */
+    .scope { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 760px) { .scope { grid-template-columns: 1fr; } }
+    .scope .box { padding: 18px 20px; }
+    .scope h3 { font-size: 1.06rem; }
+
+    /* ---------- cite & footer ---------- */
+    .bib { position: relative; margin-top: 16px; padding: 20px 22px; background: #11161a; color: #ddd8cc; }
+    .bib pre { margin: 0; overflow-x: auto; } .bib code { font: 400 .8rem/1.7 var(--mono); color: #ddd8cc; white-space: pre; }
+    .bib code .todo { color: #f0c870; }
+    .copy-btn { position: absolute; top: 14px; right: 14px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; font: 500 .7rem var(--mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+    .copy-btn.copied { background: var(--jade); border-color: var(--jade); }
+    @media (max-width: 520px) { .copy-btn { position: static; margin-bottom: 10px; } .bib code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .72rem; } }
+    .footer { margin-top: 56px; padding-top: 28px; padding-bottom: 56px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; font-size: .86rem; color: var(--dim); }
+    @media (max-width: 760px) { .footer { grid-template-columns: 1fr; } }
+    .footer a { color: var(--ink-2); }
+    .footer .links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font: 400 .72rem var(--mono); }
+
+    /* ---------- language switch (same control on all paper pages) ---------- */
+    .lang { display: inline-flex; align-items: stretch; border: 1px solid var(--line-2); background: rgba(255,255,255,.85); font: 500 .7rem/1 var(--mono); letter-spacing: .08em; text-transform: none; }
+    .lang a { display: block; padding: 6px 9px; color: var(--ink-2); text-decoration: none; background: transparent; }
+    .lang a + a { border-left: 1px solid var(--line-2); }
+    .lang a[aria-current="page"] { background: var(--ink); color: #fff; }
+    .lang a:not([aria-current="page"]):hover { color: var(--acc-ink); }
+    .nav .lang a { color: var(--ink-2); } .nav .lang a[aria-current="page"] { color: #fff; }
+    .lang.in-rail { display: none; }
+    @media (min-width: 1200px) {
+      .lang.in-rail { display: inline-flex; align-self: flex-start; margin: -14px 0 26px; }
+      .rail .lang a { display: block; padding: 6px 9px; border-left: 0; font: inherit; line-height: 1; color: var(--ink-2); }
+      .rail .lang a + a { border-left: 1px solid var(--line-2); }
+      .rail .lang a[aria-current="page"] { background: var(--ink); color: #fff; }
+      .rail .lang a:not([aria-current="page"]):hover { color: var(--acc-ink); }
+    }
+    @media (max-width: 380px) { .nav a.n2 { display: none; } }
+
+    /* ---------- Chinese page ---------- */
+    :root:lang(zh-Hans) {
+      --display: "Bricolage Grotesque", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "Inter", -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", "SFMono-Regular", Consolas, monospace;
+    }
+    :lang(zh-Hans) body { line-height: 1.75; }
+    :lang(zh-Hans) :is(.kicker, .tag, .exh, .tstrip .lab, .rung .lv b, .node small, .fields b, .op span, .gaxis span, .setup span, .legend,
+      .dp-gh span, .dp-lab small, .dp-axis .dp-lab, .hb small, .divax, .net .nl small, .net .nv small, .abl-lab small, .rcp em, .pbadge,
+      .btn, .topbar, .rail a i, .rbrand small, .rlinks a, .copy-btn, .note, .hint) { letter-spacing: .06em; }
+    :lang(zh-Hans) .gaxis span { transform: none; text-orientation: upright; letter-spacing: .12em; }
+    :lang(zh-Hans) :is(.kicker, .tag, .exh, .tstrip .lab, .rung .lv b, .node small, .fields b, .rcp em, .pbadge, .btn, .topbar, .rbrand small, .rlinks a, .copy-btn, .hb small, .divax, .setup span, .legend) { text-transform: none; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#problem">Skip to content</a>
+  <nav class="rail" aria-label="Sections">
+    <a class="rbrand" href="#top"><svg class="mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="3" y="20" width="24" height="6" fill="#b9c7f0"/><rect x="9" y="12" width="18" height="6" fill="#7d97e2"/><rect x="15" y="4" width="12" height="6" fill="#2f5bd3"/></svg><span><b>STAIR</b><small>Repair recipes</small></span></a>
+    <nav class="lang in-rail" aria-label="Language"><a href="index.html" hreflang="en" lang="en" aria-current="page">EN</a><a href="index.zh.html" hreflang="zh-Hans" lang="zh-Hans">中文</a></nav>
+    <ol>
+      <li><a href="#problem"><i>01</i>Problem</a></li>
+      <li><a href="#method"><i>02</i>Method</a>
+        <ol><li><a href="#phase1">Recipe construction</a></li><li><a href="#phase2">Retrieval &amp; plans</a></li><li><a href="#phase3">Plan-guided repair</a></li></ol></li>
+      <li><a href="#results"><i>03</i>Evaluation</a>
+        <ol><li><a href="#rq1">RQ1 · comparison</a></li><li><a href="#rq2">RQ2 · transfer</a></li><li><a href="#rq3">RQ3 · agent behavior</a></li><li><a href="#rq4">RQ4 · ablation</a></li></ol></li>
+      <li><a href="#scope"><i>04</i>Threats</a></li>
+      <li><a href="#cite"><i>05</i>Cite</a></li>
+    </ol>
+    <div class="rlinks"><a href="https://arxiv.org/abs/2607.29658" target="_blank" rel="noopener">arXiv ↗</a></div>
+  </nav>
+  <header class="topbar" id="navbar" aria-label="Page navigation">
+    <a class="brand" href="#top" aria-label="STAIR, back to top"><svg class="mark" viewBox="0 0 30 30" aria-hidden="true"><rect x="3" y="20" width="24" height="6" fill="#b9c7f0"/><rect x="9" y="12" width="18" height="6" fill="#7d97e2"/><rect x="15" y="4" width="12" height="6" fill="#2f5bd3"/></svg><b>STAIR</b></a>
+    <nav class="nav" aria-label="Sections, compact">
+      <a class="opt" href="#problem">Problem</a>
+      <a href="#method">Method</a>
+      <a class="n2" href="#results">Results</a>
+      <a class="opt" href="#cite">Cite</a>
+      <nav class="lang" aria-label="Language"><a href="index.html" hreflang="en" lang="en" aria-current="page">EN</a><a href="index.zh.html" hreflang="zh-Hans" lang="zh-Hans">中文</a></nav>
+    </nav>
+  </header>
+
+  <!-- ===================================================================== HERO -->
+  <section class="wrap hero" id="top">
+    <div class="kicker">Experience reuse for LLM repair agents</div>
+    <h1>STAIR</h1>
+    <div class="hero-grid">
+      <div>
+        <p class="ptitle">Reusing Past Repairs Through Hierarchical Trajectory Abstraction for Coding Agents</p>
+        <p class="hsub">Repair agents resolve repository-level issues, but many handle each issue on its own. STAIR reuses what
+          earlier successful repairs did. It splits each repair trajectory into stages, keeps every procedure inside it as a
+          <strong>repair recipe at several granularities</strong>, from repository-specific steps to broad strategies, and adapts
+          the recipes that fit a new issue into a plan for each repair stage.</p>
+        <p class="authors">Yisen Xu<sup>1</sup>, Jiayuan Zhou<sup>2</sup>, Ruiqi Pan<sup>3</sup>, Tse-Hsun (Peter) Chen<sup>1</sup></p>
+        <p class="affils"><sup>1</sup>SPEAR Lab, Concordia University, Montreal, Canada · <sup>2</sup>Waterloo Research Center, Huawei, Canada ·
+          <sup>3</sup>Huawei Technologies Co., Ltd.</p>
+        <div class="actions" role="group" aria-label="Primary links">
+          <a class="btn primary" href="https://arxiv.org/abs/2607.29658" target="_blank" rel="noopener">Paper · arXiv</a>
+          <a class="btn" href="#cite">BibTeX</a>
+          <span class="btn off" aria-disabled="true">Code · TBD</span>
+        </div>
+      </div>
+      <aside class="box hot ledger" aria-label="Headline results">
+        <span class="tag hot">Headline result · SWE-bench Verified</span>
+        <div class="big"><b>81.2</b><span>% Pass@1</span></div>
+        <p>with MiniMax M2.5 on Lingxi's repair scaffold; 79.2% with GPT-5. Top among the compared agents under their reported settings.</p>
+        <dl>
+          <div><dt>Replacing Lingxi's knowledge reuse, same scaffold &amp; model</dt><dd class="a">+6.6 · +3.6 pp</dd></div>
+          <div><dt>mini-SWE-agent v2 given the plans, logic &amp; tools unchanged</dt><dd>75.8 → 81.0%</dd></div>
+          <div><dt>All granularities vs. best single one (125-instance ablation)</dt><dd>80.0 vs. 64.0%</dd></div>
+          <div><dt>Benchmark</dt><dd>500 real GitHub issues</dd></div>
+        </dl>
+      </aside>
+    </div>
+    <div class="claim takehome reveal"><span class="tag">Take-home</span><b>Neither too specific nor too vague: keep every granularity, and select per stage.</b>
+      Reuse benefits from keeping each procedure of a past repair at several levels of detail, and from turning the procedures
+      selected for a new issue into concrete actions for that issue.</div>
+  </section>
+
+  <main>
+  <!-- ===================================================================== 01 PROBLEM -->
+  <section class="wrap section" id="problem">
+    <div class="shead reveal">
+      <div class="kicker">01 · Problem</div>
+      <h2>Reuse a past repair, but at <em>which level</em>?</h2>
+      <div class="prose"><p class="lede">Experienced developers reuse what worked before: localization strategies, editing procedures, verification steps.</p>
+        <p>That knowledge exists at different granularities. A concrete procedure, such as checking a particular configuration file,
+          is actionable but may apply only to closely related issues. A broader strategy, such as tracing data flow backward from a
+          failure site, transfers more widely but says less about what to do next. Agents that already reuse past repairs (Lingxi,
+          SWE-Exp, ExpeRepair) fix the unit and the granularity when they extract it: a whole repair, stage-level experience, or a
+          demonstration plus abstract insights. None splits a past repair into its distinct procedures and keeps each one at several
+          levels of detail.</p></div>
+    </div>
+    <div class="contrast">
+      <article class="box ash reveal">
+        <span class="tag ash">Too specific</span>
+        <h3>Reuse the concrete repair as it happened</h3>
+        <p>Concrete steps are actionable but may apply only to closely related issues. A new issue may need a past repair's
+          localization strategy but not its repository-specific edit; a raw trajectory adds tool outputs, failed attempts and repeated actions.</p>
+        <div class="ex"><div class="ex-in"><span class="exh">Concrete steps · example from the paper's Figure 1</span>
+          <ol class="chips seq"><li class="chip">Remove the “Add” button</li><li class="chip">User still added items</li><li class="chip">Checked why it still worked</li><li class="chip">Found a hidden shortcut</li></ol></div></div>
+      </article>
+      <article class="box ash reveal">
+        <span class="tag ash">Too vague</span>
+        <h3>Reuse only an abstract insight</h3>
+        <p>A broad strategy transfers to more issues, but it may omit the actions that made the strategy work, including steps a
+          closely related issue would need. It gives the agent less guidance on what to do next.</p>
+        <div class="ex"><div class="ex-in"><span class="exh">High-level principle · same example</span>
+          <p class="qline">Always enforce intent at every system layer, not just at the visible entry point.</p></div></div>
+      </article>
+    </div>
+    <div class="claim question reveal"><span class="tag">The question</span>How can an agent identify the reusable procedures within a
+      past repair, and represent each at the level of detail a future repair needs? STAIR's answer: keep every level, and let each repair
+      stage of the new issue draw the recipes that apply.</div>
+  </section>
+
+  <!-- ===================================================================== 02 METHOD -->
+  <section class="wrap section" id="method">
+    <div class="shead reveal">
+      <div class="kicker">02 · Method</div>
+      <h2>Keep every granularity; <em>select per stage</em>.</h2>
+      <div class="prose"><p>STAIR works in three phases. Phase 1 runs offline, once, before any target repair. Phases 2 and 3 run for
+        each new issue, separately for each of the three repair stages: localization, planning, and execution-and-verification. A
+        <strong>repair recipe</strong> is a reusable procedure or strategy derived from a past repair; a <strong>repair plan</strong>
+        instantiates selected recipes for the target issue.</p></div>
+    </div>
+    <figure class="box figure reveal">
+      <div class="scroll"><div class="figwrap"><img src="assets/overview.svg" width="1146" height="829" loading="lazy" alt="Overview of STAIR. Top, recipe construction: a solved issue, hide the Add button but items keep adding, with its agent trajectory of N steps, is turned into low-level steps (remove the Add button, user still added items, checked why it still worked, found a hidden shortcut), a medium-level issue-level reusable strategy (when a feature is blocked via UI, also check the backend rejects it directly) and a high-level cross-issue design principle (always enforce intent at every system layer, not just at the visible entry point); all are stored as repair recipes. Middle, retrieval and plan generation: a new issue, make the form edit-only with no new entries allowed, retrieves recipes from different issues and granularities, which are adapted and combined into a generated repair plan whose steps cite the recipes they come from. Bottom, plan-guided issue resolution: the plan guides localization, planning, and execution and verification, which produce the resolved issue.">
+        <a class="pbadge" href="#phase1" style="left:48%;top:3%"><b>1</b>Phase 1 · offline</a>
+        <a class="pbadge" href="#phase2" style="left:45%;top:45.1%"><b>2</b>Phase 2 · per stage</a>
+        <a class="pbadge" href="#phase3" style="left:32.6%;top:84.6%"><b>3</b>Phase 3 · per stage</a></div></div>
+      <div class="hint" aria-hidden="true">← swipe to see the full figure →</div>
+      <figcaption class="read">
+        <p><span class="tag">How to read</span>Top to bottom, following the arrows. Phase 1 turns a solved issue's trajectory into recipes at
+          low, medium and high level and stores all of them. Phase 2 retrieves recipes for a new issue, from different past issues and
+          granularities, and combines them into a plan; each plan step names the recipes it came from. Phase 3 hands the plan to the
+          repair agent.</p>
+        <p><span class="tag">What it shows</span>No level replaces another: the plan's second step comes from a medium-level recipe, its
+          third from a high-level and a medium-level recipe of two different issues. Figure 1 of the paper; construction, retrieval and
+          plan generation are performed separately for each repair stage.</p>
+      </figcaption>
+    </figure>
+
+    <!-- Phase 1 -->
+    <div class="phase" id="phase1">
+      <div class="phead reveal">
+        <div class="kicker"><b>1</b>Phase 1 · offline recipe construction</div>
+        <h3 class="ph">Split by stage, then <em>abstract level by level</em>.</h3>
+        <div class="prose"><p>STAIR runs Lingxi's repair scaffold, with its knowledge-reuse mechanism disabled, on earlier issues of the
+          same repository and keeps the trajectories of successful repairs. Each trajectory is cut into three ordered segments, one per
+          repair stage, <span class="math">τ(u) = ⟨τ<sub>loc</sub>, τ<sub>plan</sub>, τ<sub>exec</sub>⟩</span>. Within a segment, an
+          LLM operator <span class="math">G<sub>ℓ</sub></span> groups consecutive steps that serve a common repair purpose, and an
+          operator <span class="math">A<sub>ℓ</sub></span> abstracts each group into one recipe. The recipes are then grouped and
+          abstracted again, until at most <span class="math">K = 2</span> remain. Every level is kept.</p></div>
+      </div>
+      <div class="box reveal">
+        <div class="tstrip">
+          <span class="lab">One successful trajectory</span>
+          <div class="segs"><span><i>τ<sub>loc</sub></i>Localization</span><span class="on"><i>τ<sub>plan</sub></i>Planning</span><span><i>τ<sub>exec</sub></i>Execution &amp; verification</span></div>
+          <p class="sub">Recipes are built, and later retrieved, separately for each segment. Below: one segment, as in the paper's example.</p>
+        </div>
+        <div class="ladder">
+          <div class="rungs">
+            <div class="rung high"><div class="lv"><b><i style="background:var(--g-high)"></i>High level</b><span>general problem-solving principle</span></div>
+              <div class="node"><small>Cross-issue design principle</small>Always enforce intent at every system layer, not just at the visible entry point</div></div>
+            <div class="op" aria-hidden="true"><span></span><span>G groups related recipes · A abstracts them again</span></div>
+            <div class="rung med"><div class="lv"><b><i style="background:var(--g-med)"></i>Medium level</b><span>project-agnostic investigation strategy</span></div>
+              <div class="node"><small>Issue-level reusable strategy</small>When a feature is blocked via UI, also check the backend rejects it directly</div></div>
+            <div class="op" aria-hidden="true"><span></span><span>G groups consecutive steps by purpose · A abstracts each group</span></div>
+            <div class="rung low"><div class="lv"><b><i style="background:var(--g-low)"></i>Low level</b><span>concrete sub-goals grounded in project artifacts</span></div>
+              <div class="chips"><span class="chip">Remove the “Add” button</span><span class="chip">User still added items</span><span class="chip">Checked why it still worked</span><span class="chip">Found a hidden shortcut</span></div></div>
+            <div class="op" aria-hidden="true"><span></span><span>reasoning · action · observation of each step</span></div>
+            <div class="rung src"><div class="lv"><b>Source</b><span>agent trajectory, N steps</span></div>
+              <div class="node">Solved issue: Hide the “Add” button, but items keep adding</div></div>
+          </div>
+          <div class="gaxis" aria-hidden="true"><span>Transfers more widely</span><span>More actionable</span></div>
+        </div>
+        <div class="fields">
+          <div><b>Intent</b><span>what the procedure aims to accomplish</span></div>
+          <div><b>Key actions</b><span>the actions used to carry it out</span></div>
+          <div><b>When to apply</b><span>the conditions under which it is useful</span></div>
+          <div><b>Pitfalls</b><span>common pitfalls met during the repair</span></div>
+        </div>
+        <p class="fieldnote">Every recipe has these fields at every level; only their specificity changes. A low-level recipe may name
+          specific APIs; a high-level one must be fully generic. Recipes are built once with GPT-5 from 479 historical trajectories
+          (about $0.44 each, about $211 in total) and shared by all configurations.</p>
+      </div>
+      <div class="prompts block reveal">
+        <figure class="box"><span class="tag hot">Grouping operator G<sub>ℓ</sub> · Figure 2</span>
+          <div class="scroll"><img src="assets/prompt_group.svg" width="419" height="287" loading="lazy" alt="Simplified grouping prompt. Task: partition the current level into consecutive groups sharing a coherent procedural intent at the given abstraction level. Inputs: issue report, current-level nodes, abstraction level low, medium or high. Guidance: at low level group by concrete sub-goals, at medium by investigation strategies, at high by general problem-solving principles. Rules: groups are consecutive ranges with no reordering or gaps, and every node belongs to exactly one group. Output: reasoning and a list of groups with start, end and purpose."></div><div class="hint" aria-hidden="true">← swipe →</div>
+          <figcaption><b>How to read:</b> one template for all levels; only the guidance line changes with ℓ. Groups must be consecutive
+            and cover every node, so the stage's order is kept.</figcaption></figure>
+        <figure class="box"><span class="tag hot">Abstraction operator A<sub>ℓ</sub> · Figure 3</span>
+          <div class="scroll"><img src="assets/prompt_abstract.svg" width="420" height="329" loading="lazy" alt="Simplified abstraction prompt. Task: summarize a group into a single parent node at the given abstraction level. Inputs: issue report, group steps, abstraction level. Guidance: at low level produce a concrete sub-goal grounded in project artifacts, at medium extract a project-agnostic investigation strategy, at high distill a general problem-solving principle. Rules: interpret nodes holistically using reasoning traces, tool usage and existing abstractions; concreteness decreases with the level. Output: a structured node with level, node type, summary, intent, rationale, when to apply, key actions and pitfalls."></div><div class="hint" aria-hidden="true">← swipe →</div>
+          <figcaption><b>What it shows:</b> each group becomes one recipe with the fields above; concreteness decreases with the level,
+            from named APIs to a fully generic principle.</figcaption></figure>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase" id="phase2">
+      <div class="phead reveal">
+        <div class="kicker"><b>2</b>Phase 2 · retrieval and plan generation, per stage</div>
+        <h3 class="ph">One pool across granularities, <em>one plan per stage</em>.</h3>
+        <div class="prose"><p>For a new issue <span class="math">u</span> and each stage <span class="math">s</span>, every recipe from
+          stage <span class="math">s</span> of the selected past repairs is a candidate, whatever its granularity. STAIR ranks them in one
+          list by cosine similarity to the issue report (Qwen3-Embedding-8B), and an LLM verifier removes recipes whose procedures do not
+          apply at this stage. The retained set <span class="math">R<sub>s</sub>(u)</span> can mix granularities and source issues. An
+          LLM then writes the stage plan <span class="math">P<sub>s</sub>(u) = Plan(u, R<sub>s</sub>(u))</span>: it keeps applicable
+          guidance, drops irrelevant or conflicting parts, and combines complementary recipes into an action sequence for this issue.</p></div>
+      </div>
+      <div class="p2 reveal">
+        <div class="box"><span class="tag">New issue · report only</span>
+          <p class="issue">Make the form edit-only, no new entries allowed</p>
+          <ol class="steps"><li>Rank recipes of stage s from all granularities in one list</li><li>LLM verifier drops those that do not apply at this stage</li><li>Keep order: same-trajectory recipes in execution order, broader before narrower</li></ol></div>
+        <div class="to" aria-hidden="true">→</div>
+        <div class="box"><span class="tag hot">Retrieved recipes <span class="m">R<sub>s</sub>(u)</span></span>
+          <div class="rcp"><b>#1 Issue A</b><em class="high">high</em><span>Always enforce intent at every system layer, …</span></div>
+          <div class="rcp"><b>#2 Issue A</b><em class="med">medium</em><span>When a feature is blocked via UI, also check …</span></div>
+          <div class="rcp"><b>#3 Issue B</b><em class="med">medium</em><span>Check whether hidden pages still allow POST …</span></div></div>
+        <div class="to" aria-hidden="true">→</div>
+        <div class="box hot"><span class="tag hot">Generated plan <span class="m">P<sub>s</sub>(u)</span></span>
+          <ol class="plan"><li>Find out how the form controls user actions</li><li>Add a proper “edit-only” setting <i>from #2</i></li><li>Block new entries everywhere, not just on screen <i>from #1, #3</i></li><li class="more">…</li></ol></div>
+      </div>
+      <p class="p2note reveal">Example from the paper's Figure 1. Retrieval uses only the issue report; repository-specific details in the
+        plan are checked and adjusted by the repair agent as it explores the target codebase.</p>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase" id="phase3">
+      <div class="phead reveal">
+        <div class="kicker"><b>3</b>Phase 3 · plan-guided issue resolution</div>
+        <h3 class="ph">The plan <em>guides</em> the agent; the agent still decides.</h3>
+        <div class="prose"><p>Each plan is given to the repair agent in the matching stage. The agent still explores the repository,
+          applies edits, runs checks and responds to test feedback; when new evidence conflicts with the plan, it can revise its
+          decisions. The underlying agent remains responsible for constructing and verifying the final patch.</p></div>
+      </div>
+      <div class="p3 reveal">
+        <div class="stg box"><span class="conn" aria-hidden="true"></span><span class="tag">Stage 1</span><h4>Localization</h4><span class="pin">P<sub>loc</sub>(u)</span>
+          <p>guides the agent toward relevant failure evidence and candidate code locations.</p></div>
+        <div class="stg box"><span class="conn" aria-hidden="true"></span><span class="tag">Stage 2</span><h4>Planning</h4><span class="pin">P<sub>plan</sub>(u)</span>
+          <p>describes the intended modification strategy, the repair scope and relevant constraints.</p></div>
+        <div class="stg box"><span class="conn" aria-hidden="true"></span><span class="tag">Stage 3</span><h4>Execution &amp; verification</h4><span class="pin">P<sub>exec</sub>(u)</span>
+          <p>suggests procedures for implementing the repair and checking it.</p></div>
+      </div>
+      <div class="grid2 scaf reveal">
+        <div class="box"><span class="tag hot">Primary scaffold · RQ1, RQ3, RQ4</span><h4>Lingxi</h4>
+          <p>Its decision logic, tools and three-stage repair process are kept; its original knowledge-reuse mechanism is disabled, and
+            each stage's prompt receives the STAIR plan for that stage.</p></div>
+        <div class="box"><span class="tag hot">Transfer target · RQ2</span><h4>mini-SWE-agent v2</h4>
+          <p>A minimal bash-only agent. The plans are prepended as an <code>&lt;external_reference_plans&gt;</code> block; its source
+            code, tool definitions and verification logic are unchanged.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 03 RESULTS -->
+  <section class="wrap section" id="results">
+    <div class="shead reveal">
+      <div class="kicker">03 · Evaluation</div>
+      <h2>Does <em>multi-granularity</em> reuse pay off?</h2>
+      <div class="prose"><p>All experiments use SWE-bench Verified: 500 real GitHub issues from 12 Python repositories, each checked by
+        developer-written tests. Pass@1 is the share of issues resolved by the final patch of a single agent run. Two backbones, both
+        with high reasoning (HR): GPT-5 (commercial) and MiniMax M2.5 (open-weight). For each target issue, past issues come from the
+        same repository, were created before it, and are disjoint from the evaluation instances.</p></div>
+      <div class="setup"><span>Recipes: built once with GPT-5</span><span>10–15 min per instance</span><span>$0.84 / instance · MiniMax M2.5</span><span>$1.60 / instance · GPT-5</span></div>
+    </div>
+
+    <div class="block-h reveal" id="rq1">
+      <div class="kicker">RQ1 · comparison with repair agents</div>
+      <h3>Same scaffold, same model: <em>higher Pass@1</em>.</h3>
+    </div>
+    <figure class="box chart reveal" style="margin:0">
+      <div class="legend" aria-hidden="true"><span><i style="background:var(--acc)"></i>STAIR</span><span><i style="background:var(--base-ink)"></i>Lingxi, same scaffold &amp; backbone</span><span><i style="background:var(--ash)"></i>Other agents</span></div>
+      <div class="dp">
+<div class="dp-g"><div class="dp-gh">GPT-5 (HR)<span>same backbone</span></div>
+<div class="dp-row other"><div class="dp-lab"><b>live-SWE-agent</b></div><div class="dp-track"><span class="dp-dot" style="left:17.00%"></span><span class="dp-val" style="left:17.00%">68.4</span></div></div>
+<div class="dp-row other"><div class="dp-lab"><b>OpenHands</b></div><div class="dp-track"><span class="dp-dot" style="left:34.00%"></span><span class="dp-val" style="left:34.00%">71.8</span></div></div>
+<div class="dp-row base"><div class="dp-lab"><b>Lingxi</b><small>same scaffold, original knowledge reuse</small></div><div class="dp-track"><span class="dp-dot" style="left:53.00%"></span><span class="dp-val" style="left:53.00%">75.6</span></div></div>
+<div class="dp-row ours"><div class="dp-lab"><b>STAIR</b><small>Lingxi scaffold + recipes</small></div><div class="dp-track"><span class="dp-seg" style="left:53.00%;width:18.00%"></span><span class="dp-gain" style="left:62.00%">+3.6 pp</span><span class="dp-dot" style="left:71.00%"></span><span class="dp-val" style="left:71.00%">79.2</span></div></div>
+</div>
+<div class="dp-g"><div class="dp-gh">MiniMax M2.5 (HR)<span>same backbone</span></div>
+<div class="dp-row base"><div class="dp-lab"><b>Lingxi</b><small>same scaffold, original knowledge reuse</small></div><div class="dp-track"><span class="dp-dot" style="left:48.00%"></span><span class="dp-val" style="left:48.00%">74.6</span></div></div>
+<div class="dp-row other"><div class="dp-lab"><b>mini-SWE-agent v2</b></div><div class="dp-track"><span class="dp-dot" style="left:54.00%"></span><span class="dp-val" style="left:54.00%">75.8</span></div></div>
+<div class="dp-row ours"><div class="dp-lab"><b>STAIR</b><small>Lingxi scaffold + recipes</small></div><div class="dp-track"><span class="dp-seg" style="left:48.00%;width:33.00%"></span><span class="dp-gain" style="left:64.50%">+6.6 pp</span><span class="dp-dot" style="left:81.00%"></span><span class="dp-val" style="left:81.00%">81.2</span></div></div>
+</div>
+<div class="dp-g"><div class="dp-gh">Claude 4 Sonnet<span>reported results · different backbone · no STAIR run</span></div>
+<div class="dp-row other"><div class="dp-lab"><b>SWE-Exp</b></div><div class="dp-track"><span class="dp-dot" style="left:40.00%"></span><span class="dp-val" style="left:40.00%">73.0</span></div></div>
+<div class="dp-row other"><div class="dp-lab"><b>ExpeRepair</b><small>with o4-mini as fallback</small></div><div class="dp-track"><span class="dp-dot" style="left:48.00%"></span><span class="dp-val" style="left:48.00%">74.6</span></div></div>
+<div class="dp-row other"><div class="dp-lab"><b>Lingxi</b></div><div class="dp-track"><span class="dp-dot" style="left:48.00%"></span><span class="dp-val" style="left:48.00%">74.6</span></div></div>
+</div>
+<div class="dp-axis"><div class="dp-lab">Pass@1 (%) · axis starts at 65</div><div class="dp-ticks"><span style="left:0%">65</span><span style="left:25%">70</span><span style="left:50%">75</span><span style="left:75%">80</span><span style="left:100%">85</span></div></div>
+</div>
+    </figure>
+    <div class="callouts reveal">
+      <div class="box hot callout"><span class="bign">+6.6 pp</span><span class="txt"><b>MiniMax M2.5 · Lingxi → STAIR</b>74.6 → 81.2, only the knowledge-reuse mechanism changes</span></div>
+      <div class="box hot callout"><span class="bign">+3.6 pp</span><span class="txt"><b>GPT-5 · Lingxi → STAIR</b>75.6 → 79.2, only the knowledge-reuse mechanism changes</span></div>
+    </div>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>Rows are grouped by backbone, so within a group only the agent differs; the paper's Table 2
+        lists the same numbers by agent type. Lingxi in dark grey is the controlled comparison: same scaffold, backbone, tools and
+        historical issues, with its original knowledge reuse instead of STAIR's recipes and plans. The Claude 4 Sonnet rows are reported
+        results with a different backbone, so that comparison is less controlled.</p>
+      <p><span class="tag">What it shows</span>STAIR reaches 81.2% with MiniMax M2.5 and 79.2% with GPT-5, the highest among the compared
+        agents under their reported settings. Changing only the knowledge-reuse mechanism adds 6.6 points on MiniMax M2.5 and 3.6 on GPT-5;
+        GPT-5's higher Lingxi baseline may leave less room. On the same backbones, STAIR is 7.4 points above OpenHands, 10.8 above
+        live-SWE-agent and 5.4 above mini-SWE-agent v2.</p>
+    </div>
+
+    <div class="block-h reveal" id="rq2">
+      <div class="kicker">RQ2 · transfer to another agent · MiniMax M2.5</div>
+      <h3>The plans also guide <em>a different agent</em>.</h3>
+    </div>
+    <figure class="box chart reveal" style="margin:0">
+      <div class="legend" aria-hidden="true"><span><i class="sq" style="background:var(--ash)"></i>mini-SWE-agent v2</span><span><i class="sq" style="background:var(--acc)"></i>+ STAIR plans</span><span>bars start at zero</span></div>
+      <div class="metrics">
+<div class="metric"><span class="tag">Pass@1 on 500 issues</span><h4>Resolved</h4><div class="hb"><small>mini-SWE-agent v2</small><span class="bar"><i style="width:75.8%"></i></span><b>379/500 · 75.8%</b></div><div class="hb ours"><small>+ STAIR plans</small><span class="bar"><i style="width:81.0%"></i></span><b>405/500 · 81.0%</b></div><div class="delta">+5.2 pp <span>· 379 → 405 resolved</span></div></div>
+<div class="metric"><span class="tag">per instance</span><h4>Average steps</h4><div class="hb"><small>mini-SWE-agent v2</small><span class="bar"><i style="width:86.4%"></i></span><b>60.45</b></div><div class="hb ours"><small>+ STAIR plans</small><span class="bar"><i style="width:83.1%"></i></span><b>58.18</b></div><div class="delta">fewer steps <span>· 60.45 → 58.18</span></div></div>
+<div class="metric"><span class="tag">total per instance</span><h4>Average tokens</h4><div class="hb"><small>mini-SWE-agent v2</small><span class="bar"><i style="width:88.9%"></i></span><b>1,244,923</b></div><div class="hb ours"><small>+ STAIR plans</small><span class="bar"><i style="width:84.3%"></i></span><b>1,179,885</b></div><div class="delta">−5.2% <span>· 1,245k → 1,180k</span></div></div>
+</div>
+    </figure>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>mini-SWE-agent v2 has its own architecture, tool interface and prompting strategy. The only
+        change is the prepended block of STAIR plans, generated from recipes built on Lingxi trajectories. Table 3 of the paper, all
+        500 instances.</p>
+      <p><span class="tag">What it shows</span>Pass@1 rises from 75.8% to 81.0% (+5.2 points), close to STAIR on Lingxi's scaffold (81.2%).
+        Average steps fall from 60.45 to 58.18 and tokens per instance by 5.2%: the plans do not just add context, the agent explores
+        less. This is evidence for one other scaffold, not for agent scaffolds in general.</p>
+    </div>
+
+    <div class="block-h reveal" id="rq3">
+      <div class="kicker">RQ3 · how plans change agent behavior</div>
+      <h3>Where plans help, and <em>where they fall short</em>.</h3>
+    </div>
+    <div class="box chart reveal">
+      <span class="tag subh">Gained and regressed instances · Table 4</span>
+      <div class="nets">
+<div class="net"><div class="nl"><b>STAIR<sub>MiniMax</sub> vs. Lingxi<sub>MiniMax</sub></b><small>shared 363 · solved by both</small></div><div class="div" role="img" aria-label="10 regressed, 43 gained"><div class="l"><i style="width:83.3%">10</i></div><div class="r"><i style="width:95.6%">43</i></div></div><div class="nv">+33<small>net</small></div></div>
+<div class="net"><div class="nl"><b>mini-SWE-agent v2 + Plans vs. vanilla</b><small>shared 372 · solved by both</small></div><div class="div" role="img" aria-label="7 regressed, 33 gained"><div class="l"><i style="width:58.3%">7</i></div><div class="r"><i style="width:73.3%">33</i></div></div><div class="nv">+26<small>net</small></div></div>
+</div><div class="divax" aria-hidden="true"><span></span><div><span class="l">← regressed</span><span class="r">gained →</span></div><span></span></div>
+    </div>
+    <div class="box chart block reveal">
+      <span class="tag subh">Why gained · what the plan corrected · Figure 4, rebuilt</span>
+      <div class="legend" aria-hidden="true"><span><i class="sq" style="background:var(--acc)"></i>STAIR<sub>MiniMax</sub> · 43 gains</span><span><i class="sq" style="background:var(--g-low);border:1px solid var(--acc)"></i>mini-SWE-agent v2 + Plans · 33 gains</span></div>
+      <div class="cats">
+<div class="cat"><div><h4>Wrong Location</h4><p>The baseline targets the wrong component and cannot recover; the plan points to the correct location from the start, e.g. the upstream serializer rather than the downstream loader.</p></div><div class="bars"><div class="gb s"><span class="bar"><i style="width:48%"></i></span><b>12 (28%)</b></div><div class="gb m top"><span class="bar"><i style="width:68%"></i></span><b>17 (52%)</b></div></div></div>
+<div class="cat"><div><h4>Partial Fix</h4><p>The baseline finds the root cause but edits only some of the affected code. In django-11138 it fixed a timezone bug for MySQL and Oracle but not SQLite; the plan framed it as a cross-backend audit.</p></div><div class="bars"><div class="gb s top"><span class="bar"><i style="width:84%"></i></span><b>21 (49%)</b></div><div class="gb m"><span class="bar"><i style="width:40%"></i></span><b>10 (30%)</b></div></div></div>
+<div class="cat"><div><h4>Over-modification</h4><p>The baseline changes more code than needed; the plan keeps the repair to the minimal change, e.g. extending a matching condition instead of rewriting the discovery pipeline.</p></div><div class="bars"><div class="gb s"><span class="bar"><i style="width:40%"></i></span><b>10 (23%)</b></div><div class="gb m"><span class="bar"><i style="width:24%"></i></span><b>6 (18%)</b></div></div></div>
+</div>
+    </div>
+    <div class="box chart block reveal">
+      <span class="tag subh">Why regressed · all 17 regressions</span>
+      <div class="reg">
+        <div><span class="seg">8 · plan-related</span><h4>The plan misses part of the scope</h4>
+          <p>It captures the main direction but not every change; typically the fix needs coordinated updates across several files or
+            entry points. 5 from STAIR<sub>MiniMax</sub>, 3 from mini-SWE-agent v2 + Plans.</p></div>
+        <div><span class="seg">9 · not plan-related</span><h4>The plan fits; execution fails</h4>
+          <p>The agent deviates from the plan, makes unnecessarily complex edits, or makes local mistakes such as a wrong API or wrong
+            arguments. 5 from STAIR<sub>MiniMax</sub>, 4 from mini-SWE-agent v2 + Plans.</p></div>
+      </div>
+    </div>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>Gained means solved only with STAIR's plan; regressed means solved only by the baseline (Lingxi
+        for STAIR, vanilla mini-SWE-agent v2 for the plan-augmented version). Two authors labeled every such instance from its plan, patch
+        and full trajectory and resolved disagreements (Cohen's κ = 0.85).</p>
+      <p><span class="tag">What it shows</span>Gains outnumber regressions, 43 to 10 and 33 to 7. Each agent gains where it is weakest:
+        Lingxi already has an explicit localization stage, so plans mostly widen the fix (Partial Fix, 49%); bash-only mini-SWE-agent v2
+        most often starts in the wrong place, so plans mostly redirect it (Wrong Location, 52%). Of the 17 regressions, 8 trace back to plans
+        that miss part of the required scope; in the other 9 the plan fit and execution failed.</p>
+    </div>
+
+    <div class="block-h reveal" id="rq4">
+      <div class="kicker">RQ4 · ablation · 125-instance subset · MiniMax M2.5</div>
+      <h3>No single granularity <em>matches the full pool</em>.</h3>
+    </div>
+    <figure class="box chart reveal" style="margin:0">
+      <div class="legend" aria-hidden="true"><span>Resolved (%) · Δ vs. full system in percentage points · Table 5</span></div>
+      <div class="abl">
+<div class="abl-row full"><div class="abl-lab">Multi-granularity reuse<small>full system · all levels</small></div><span class="bar"><i style="width:80.0%;background:linear-gradient(90deg, var(--g-low), var(--g-med) 45%, var(--g-high))"></i></span><div class="abl-v">100/125 · 80.0</div></div>
+<div class="abl-row "><div class="abl-lab">Low-level only<small>single granularity</small></div><span class="bar"><i style="width:64.0%;background:var(--g-low)"></i></span><div class="abl-v">80/125 · 64.0<span>−16.0</span></div></div>
+<div class="abl-row "><div class="abl-lab">Medium-level only<small>single granularity</small></div><span class="bar"><i style="width:60.8%;background:var(--g-med)"></i></span><div class="abl-v">76/125 · 60.8<span>−19.2</span></div></div>
+<div class="abl-row "><div class="abl-lab">High-level only<small>single granularity</small></div><span class="bar"><i style="width:58.4%;background:var(--g-high)"></i></span><div class="abl-v">73/125 · 58.4<span>−21.6</span></div></div>
+<div class="abl-row "><div class="abl-lab">Raw trajectories<small>no abstraction</small></div><span class="bar"><i style="width:57.6%;background:var(--ash)"></i></span><div class="abl-v">72/125 · 57.6<span>−22.4</span></div></div>
+<div class="abl-ax" aria-hidden="true"><span></span><div><span style="left:0%">0</span><span style="left:20%">20</span><span style="left:40%">40</span><span style="left:60%">60</span><span style="left:80%">80</span><span style="left:100%">100</span></div><span></span></div>
+</div>
+    </figure>
+    <div class="callouts reveal">
+      <div class="box hot callout"><span class="bign">91.4%</span><span class="txt"><b>of stage plans in the full system</b>use recipes from more than one granularity</span></div>
+      <div class="box callout"><span class="bign ink">−22.4 pp</span><span class="txt"><b>Raw trajectories instead of recipes</b>the largest drop among the variants</span></div>
+    </div>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>Each variant changes only what is reused. The 125 instances are difficulty-stratified: 92
+        (73.6%) medium or hard, with an estimated fix time of at least 15 minutes, and 33 (26.4%) easy. The subset emphasizes harder
+        issues, so differences on the full benchmark may not be the same.</p>
+      <p><span class="tag">What it shows</span>The full pool resolves 100 of 125 (80.0%). Restricting retrieval to one granularity costs 16.0
+        to 21.6 points; concrete low-level recipes do best of the three, possibly because they are more actionable, yet still trail by 16.0.
+        Reusing raw trajectories is lowest at 57.6%. The results support keeping recipes at several granularities and selecting among
+        them per issue and stage.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 04 SCOPE -->
+  <section class="wrap section" id="scope">
+    <div class="shead reveal">
+      <div class="kicker">04 · Threats to validity</div>
+      <h2>What the results <em>do not</em> establish.</h2>
+      <div class="prose"><p>The paper states these limits; the numbers above should be read within them.</p></div>
+    </div>
+    <div class="scope">
+      <article class="box ash reveal"><span class="tag ash">External</span><h3>One benchmark, one language</h3>
+        <p>SWE-bench Verified has 500 Python instances from 12 repositories. Results may not carry over to other languages, benchmarks or
+          proprietary codebases.</p></article>
+      <article class="box ash reveal"><span class="tag ash">External</span><h3>One source agent, one transfer target</h3>
+        <p>Recipes come from Lingxi trajectories; another source agent may produce trajectories of different quality. RQ2 shows transfer
+          to mini-SWE-agent v2, not to other scaffolds.</p></article>
+      <article class="box ash reveal"><span class="tag ash">Internal</span><h3>LLM-built recipes, manual labels</h3>
+        <p>Grouping, abstraction and the relevance verifier are LLM-based; recipe quality can vary with trajectory length, and the verifier
+          may drop useful recipes or keep inapplicable ones. RQ3's labels involve judgment (κ = 0.85).</p></article>
+      <article class="box ash reveal"><span class="tag ash">Construct</span><h3>Tests, two models, a sampled ablation</h3>
+        <p>Pass@1 relies on the provided tests, which may accept behaviorally incorrect patches. Two backbones do not establish the same
+          benefit for other models. RQ4 uses a subset weighted toward harder issues.</p></article>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 05 CITE -->
+  <section class="wrap section" id="cite">
+    <div class="shead reveal">
+      <div class="kicker">05 · Cite</div>
+      <h2>BibTeX</h2>
+      <div class="prose"><p>Please cite the arXiv preprint.</p></div>
+    </div>
+    <div class="bib reveal">
+      <button class="copy-btn" type="button" onclick="copyBibtex(this)" aria-label="Copy BibTeX">Copy</button><span id="copy-status" class="sr-only" role="status" aria-live="polite"></span>
+      <pre><code>@misc{xu2026reusingpastrepairshierarchical,
+  title         = {Reusing Past Repairs Through Hierarchical Trajectory
+                   Abstraction for Coding Agents},
+  author        = {Yisen Xu and Jiayuan Zhou and Ruiqi Pan and Tse-Hsun Chen},
+  year          = {2026},
+  eprint        = {2607.29658},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.SE},
+  url           = {https://arxiv.org/abs/2607.29658}
+}</code></pre>
+    </div>
+  </section>
+  </main>
+
+  <footer class="wrap footer">
+    <div><b>STAIR</b> · Reusing Past Repairs Through Hierarchical Trajectory Abstraction for Coding Agents · Yisen Xu, Jiayuan Zhou, Ruiqi Pan,
+      Tse-Hsun (Peter) Chen · Concordia University and Huawei.
+      <div class="links"><a href="https://arxiv.org/abs/2607.29658" target="_blank" rel="noopener">arXiv:2607.29658</a><a href="#cite">BibTeX</a><span>Code · TBD</span></div></div>
+    <div>All numbers are taken from the paper. Figures marked “rebuilt” are redrawn from its tables; the overview and prompt figures are the
+      paper's own.</div>
+  </footer>
+
+  <script>
+    (function () {
+      const navbar = document.getElementById("navbar");
+      const onScroll = () => navbar.classList.toggle("scrolled", window.scrollY > 30);
+      onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+      const nodes = Array.from(document.querySelectorAll(".reveal"));
+      if ("IntersectionObserver" in window) {
+        const obs = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } }), { threshold: 0, rootMargin: "0px 0px -6% 0px" });
+        nodes.forEach(n => obs.observe(n));
+      } else nodes.forEach(n => n.classList.add("visible"));
+      const links = Array.from(document.querySelectorAll(".rail ol a[href^='#']"));
+      const targets = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+      const mark = () => {
+        let cur = null; const y = window.scrollY + window.innerHeight * 0.3;
+        targets.forEach(el => { if (el.getBoundingClientRect().top + window.scrollY <= y) cur = el.id; });
+        links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + cur));
+      };
+      mark(); window.addEventListener("scroll", mark, { passive: true });
+      document.querySelectorAll(".lang a").forEach(a => a.addEventListener("click", () => { a.href = a.getAttribute("href").split("#")[0] + location.hash; }));
+    })();
+    function copyBibtex(btn) {
+      const code = btn.closest(".bib").querySelector("code").textContent;
+      const status = document.getElementById("copy-status");
+      const flash = (ok) => { btn.textContent = ok ? "Copied" : "Copy failed"; btn.classList.toggle("copied", ok);
+        status.textContent = ok ? "BibTeX copied to the clipboard." : "Copy failed. Select the text and copy it manually.";
+        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); status.textContent = ""; }, 2000); };
+      const fallback = () => { const ta = document.createElement("textarea"); ta.value = code; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+        document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); flash(ok); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => flash(true)).catch(fallback); else fallback();
+    }
+  </script>
+</body>
+</html>

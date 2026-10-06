@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>document.documentElement.classList.add('js')</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lingxi (灵犀) · Procedural knowledge for repository-level issue resolution · ISSTA 2026</title>
+  <meta name="description" content="Lingxi gives coding agents procedural knowledge, how a kind of issue is diagnosed and fixed and why, recovered from a repository's history, to guide analysis, planning and fixing. 74.6% Pass@1 on SWE-bench Verified. ISSTA 2026 Distinguished Paper.">
+  <meta property="og:title" content="Lingxi: Repository-Level Issue Resolution Framework Enhanced by Procedural Knowledge Guided Scaling">
+  <meta property="og:description" content="Knowledge comes first; exploration follows. ISSTA 2026 Distinguished Paper.">
+  <meta property="og:type" content="article">
+  <link rel="alternate" hreflang="en" href="index.html">
+  <link rel="alternate" hreflang="zh-Hans" href="index.zh.html">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='3' fill='%23e2502a'/%3E%3Cpath d='M5 12.5h14M12 5.5v14' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
+  <style>
+    /* =====================================================================
+       Light port of the rev9 talk deck ("Lingxi Thread"): square boxes with
+       corner ticks, mono uppercase tags, Bricolage Grotesque, cinnabar thread.
+       cinnabar = Lingxi · jade = knowledge / success · ash = baselines
+       orange = step 1 (issue-specific) · pink = step 2 / retrieved knowledge
+       ===================================================================== */
+    :root {
+      --paper: #f7f6f2; --white: #ffffff;
+      --ink: #161c1a; --ink-2: #2b332f; --dim: #555d59; --faint: #8a918d;
+      --line: rgba(22,28,26,.14); --line-2: rgba(22,28,26,.24); --tickc: rgba(22,28,26,.5);
+      --cin: #e2502a; --cin-ink: #b93c1b; --cin-soft: rgba(226,80,42,.08);
+      --jade: #2f8f6c; --jade-ink: #1f6b4f; --jade-soft: rgba(47,143,108,.08);
+      --ash: #b3b8b5; --ash-ink: #6b736f;
+      --orange: #e0a46c; --orange-ink: #9a5414; --orange-soft: rgba(242,185,138,.14);
+      --pink: #e39d99; --pink-ink: #ad3f3a; --pink-soft: rgba(239,163,160,.13);
+      --sand-ink: #7f5d24;
+      --display: "Bricolage Grotesque", "Inter", -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --han: "Noto Serif SC", "Songti SC", serif;
+      --nav-h: 64px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: radial-gradient(900px 560px at 12% -6%, rgba(226,80,42,.07), transparent 62%), radial-gradient(900px 600px at 96% 6%, rgba(47,143,108,.06), transparent 64%), var(--paper);
+      font-family: var(--display); font-size: 16px; line-height: 1.6; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+    a { color: var(--cin-ink); }
+    code { font-family: var(--mono); font-size: .86em; color: var(--sand-ink); }
+    b, strong { font-weight: 600; color: var(--ink); }
+    .han { font-family: var(--han); }
+    :is(a, button):focus-visible { outline: 2px solid var(--cin); outline-offset: 3px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .skip { position: absolute; left: -999px; top: 8px; z-index: 200; background: var(--ink); color: #fff; padding: 8px 12px; font-family: var(--mono); font-size: .8rem; }
+    .skip:focus { left: 16px; }
+    .js .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+    .js .reveal.visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .js .reveal { opacity: 1; transform: none; transition: none; } }
+    @media print { .js .reveal { opacity: 1 !important; transform: none !important; } .topbar { position: static !important; } .hero { padding-top: 20px !important; } .skip, .copy-btn, .hint { display: none !important; } }
+
+    /* ---------- shared primitives (deck: .kicker .tag .box .claim) ---------- */
+    .kicker { display: flex; align-items: center; gap: 10px; font: 500 .74rem/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--cin-ink); }
+    .kicker::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--cin); flex: none; }
+    .tag { display: block; font: 500 .7rem/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--jade-ink); }
+    .tag.hot { color: var(--cin-ink); } .tag.dim { color: var(--dim); } .tag.ash { color: var(--ash-ink); }
+    .tag.orange { color: var(--orange-ink); } .tag.pink { color: var(--pink-ink); }
+    .refchip { display: inline-block; margin-left: 10px; padding: 2px 8px; border: 1px solid var(--line-2); border-radius: 999px; font: 500 .66rem/1.3 var(--mono); letter-spacing: .04em; text-transform: none; color: var(--dim); vertical-align: 1px; }
+    .box { position: relative; border: 1px solid var(--line); background: rgba(255,255,255,.72); padding: 22px 24px; min-width: 0; }
+    .box::before, .box::after { content: ""; position: absolute; width: 11px; height: 11px; border: 0 solid var(--tickc); }
+    .box::before { left: -1px; top: -1px; border-width: 2px 0 0 2px; }
+    .box::after { right: -1px; bottom: -1px; border-width: 0 2px 2px 0; }
+    .box.hot { border-color: rgba(226,80,42,.45); background: linear-gradient(160deg, rgba(226,80,42,.07), rgba(226,80,42,.015)); }
+    .box.hot::before, .box.hot::after { border-color: var(--cin); }
+    .box.jade { border-color: rgba(47,143,108,.4); } .box.jade::before, .box.jade::after { border-color: var(--jade); }
+    .box.ash { background: rgba(255,255,255,.5); }
+    .box.orange { border-color: rgba(224,164,108,.6); background: linear-gradient(160deg, rgba(242,185,138,.13), rgba(242,185,138,.03)); }
+    .box.orange::before, .box.orange::after { border-color: var(--orange); }
+    .box.pink { border-color: rgba(227,157,153,.6); background: linear-gradient(160deg, rgba(239,163,160,.13), rgba(239,163,160,.03)); }
+    .box.pink::before, .box.pink::after { border-color: var(--pink); }
+    .box h3, .box h4 { margin: 8px 0 0; font: 700 1.18rem/1.25 var(--display); letter-spacing: -.015em; color: var(--ink); }
+    .box p { margin: 8px 0 0; color: var(--dim); font-size: .94rem; }
+    ul.plain { list-style: none; margin: 10px 0 0; padding: 0; }
+    ul.plain li { position: relative; padding-left: 18px; margin-top: 6px; color: var(--dim); }
+    ul.plain li::before { content: ""; position: absolute; left: 0; top: .62em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--jade); }
+    .box.hot ul.plain li::before { background: var(--cin); border-color: var(--cin); }
+    .redline { margin-top: 12px !important; font: 500 .82rem/1.45 var(--mono) !important; color: var(--cin-ink) !important; }
+    .claim { border-left: 3px solid var(--cin); background: var(--cin-soft); padding: 14px 20px; font-size: 1.08rem; line-height: 1.5; color: var(--ink); }
+    .claim .tag { margin-bottom: 4px; color: var(--cin-ink); }
+    .art { display: block; width: 100%; height: auto; }
+
+    /* ---------- topbar ---------- */
+    .topbar { position: fixed; z-index: 100; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 40px;
+      background: rgba(247,246,242,.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid transparent; font: 400 .74rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; transition: background .3s, border-color .3s; }
+    .topbar.scrolled { background: rgba(247,246,242,.92); border-bottom-color: var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; white-space: nowrap; }
+    .brand b { font-weight: 600; } .brand .h { font: 900 1.15rem/1 var(--han); color: var(--cin); letter-spacing: 0; }
+    .brand .sub { color: var(--dim); }
+    .nav { display: flex; gap: 22px; align-items: center; }
+    .nav a { color: var(--dim); text-decoration: none; } .nav a:hover { color: var(--cin-ink); }
+    .nav a.out { color: var(--ink); border: 1px solid var(--line-2); padding: 6px 10px; }
+    @media (max-width: 960px) { .topbar { padding: 12px 20px; } .nav { gap: 14px; } }
+    @media (max-width: 760px) { .nav .opt { display: none; } }
+    @media (max-width: 400px) { .brand .sub { display: none; } }
+
+    /* ---------- layout ---------- */
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 40px; }
+    @media (max-width: 960px) { .wrap { padding: 0 20px; } }
+    .section { padding-top: 72px; padding-bottom: 24px; scroll-margin-top: var(--nav-h); }
+    @media (max-width: 960px) { .section { padding-top: 52px; padding-bottom: 16px; } }
+    .section h2 { margin: 14px 0 18px; font: 700 clamp(1.65rem, 3.2vw, 2.35rem)/1.1 var(--display); letter-spacing: -.03em; }
+    .section h2 em, h3 em { font-style: normal; color: var(--cin); }
+    .prose { max-width: 47em; }
+    .prose p { margin: 0 0 14px; font-size: 1.03rem; color: var(--ink-2); }
+    .prose p.lede { font-size: 1.12rem; color: var(--ink); }
+    .block { margin-top: 26px; }
+    .block-h { margin: 46px 0 14px; }
+    .block-h h3 { margin: 10px 0 0; font: 700 clamp(1.25rem, 2.3vw, 1.6rem)/1.2 var(--display); letter-spacing: -.02em; }
+    .cap { margin: 12px 0 0; font-size: .92rem; color: var(--dim); max-width: 52em; }
+    .note { margin: 12px 0 0; font: 400 .74rem/1.65 var(--mono); color: var(--faint); }
+    .read { margin-top: 18px; max-width: 49em; }
+    .read p { margin: 0 0 10px; color: var(--ink-2); }
+    .read p .tag { display: inline; margin-right: 8px; color: var(--cin-ink); }
+    .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .hint { display: none; margin-top: 8px; text-align: center; font: 400 .68rem var(--mono); color: var(--faint); }
+    @media (max-width: 760px) { .hint { display: block; } }
+
+    /* ---------- hero ---------- */
+    .hero { padding-top: 132px; padding-bottom: 36px; }
+    .hero-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 48px; align-items: start; }
+    .hero-grid > * { min-width: 0; }
+    @media (max-width: 960px) { .hero { padding-top: 100px; } .hero-grid { grid-template-columns: 1fr; gap: 28px; } }
+    .award { color: var(--sand-ink); } .award::before { background: #c79a4c; }
+    .hero h1 { margin: 18px 0 18px; font: 800 clamp(2.8rem, 6.4vw, 4.6rem)/1 var(--display); letter-spacing: -.045em; }
+    .hero h1 .han { margin-left: .22em; font-size: .62em; font-weight: 700; color: var(--cin); letter-spacing: 0; }
+    .ptitle { margin: 0 0 16px; font: 600 clamp(1.1rem, 2vw, 1.38rem)/1.3 var(--display); color: var(--ink-2); letter-spacing: -.01em; max-width: 28em; }
+    .hsub { margin: 0 0 20px; font-size: 1.04rem; color: var(--ink-2); max-width: 40em; }
+    .authors { margin: 0 0 4px; font-size: .95rem; }
+    .authors sup, .affils sup { font: 500 .65em var(--mono); color: var(--cin-ink); }
+    .affils { margin: 0 0 22px; font: 400 .76rem/1.8 var(--mono); color: var(--dim); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid var(--line-2); background: #fff; color: var(--ink); text-decoration: none; font: 500 .74rem/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; }
+    .btn:hover { border-color: var(--cin); color: var(--cin-ink); }
+    .btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; } .btn.primary:hover { background: #000; color: #fff; }
+    .hnote { margin: 10px 0 0; font: 400 .72rem var(--mono); color: var(--faint); }
+    .ledger .big { display: flex; align-items: baseline; gap: 6px; margin: 10px 0 2px; }
+    .ledger .big b { font: 800 4rem/1 var(--display); letter-spacing: -.04em; color: var(--cin); }
+    .ledger .big span { font: 500 .9rem var(--mono); color: var(--dim); }
+    .ledger p { margin: 4px 0 14px; font-size: .92rem; }
+    .ledger dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
+    .ledger dl div { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+    .ledger dl div:nth-child(odd) { border-right: 1px solid var(--line); }
+    .ledger dl div:nth-child(even) { padding-left: 12px; }
+    .ledger dt { font-size: .76rem; line-height: 1.35; color: var(--dim); }
+    .ledger dd { margin: 4px 0 0; font: 600 .95rem/1.3 var(--mono); color: var(--ink); }
+    .ledger dd.j { color: var(--jade-ink); }
+    @media (max-width: 400px) { .ledger dl { grid-template-columns: 1fr; } .ledger dl div:nth-child(odd) { border-right: 0; } .ledger dl div:nth-child(even) { padding-left: 0; } }
+    .takehome { margin-top: 30px; }
+
+    /* ---------- motivation ---------- */
+    .dev { display: grid; grid-template-columns: 1.45fr 1fr; gap: 26px; align-items: center; margin-top: 14px; }
+    .dev > * { min-width: 0; }
+    @media (max-width: 860px) { .dev { grid-template-columns: 1fr; } }
+    .pk { border: 1px solid rgba(47,143,108,.45); background: var(--jade-soft); padding: 14px 18px; }
+    .pk .q { margin: 4px 0 8px; font-weight: 700; color: var(--jade-ink); }
+    .pk ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+    .pk li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; color: var(--ink-2); }
+    .pk li span { width: 19px; height: 19px; margin-top: 3px; border-radius: 50%; background: var(--cin); color: #fff; font: 700 .66rem/19px var(--mono); text-align: center; }
+    .pk .why { margin-top: 8px; font-size: .92rem; color: var(--dim); }
+    .pk .why i { font: 500 .66rem var(--mono); letter-spacing: .12em; font-style: normal; color: var(--ink-2); margin-right: 8px; }
+    .ingr { display: grid; grid-template-columns: 40px minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 6px 28px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .ingr:first-of-type { margin-top: 6px; }
+    .inum { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--dim); display: grid; place-items: center; font: 700 .82rem var(--mono); }
+    .ingr b { display: block; font-size: 1.12rem; }
+    .ingr p { margin: 2px 0 0; color: var(--dim); }
+    .ingr .cd { position: relative; border: 1px solid var(--line-2); border-radius: 4px; padding: 12px 10px 6px; }
+    .ingr .cd > span { position: absolute; left: 10px; top: -8px; padding: 0 6px; background: #fbfaf8; font: 500 .62rem/1.2 var(--mono); letter-spacing: .08em; color: var(--dim); }
+    .ingr > :last-child { width: 100%; max-width: 340px; justify-self: center; }
+    @media (max-width: 680px) { .ingr { grid-template-columns: 36px minmax(0, 1fr); } .ingr > :last-child { grid-column: 2; max-width: 320px; } }
+    .ingr-plus { margin: 14px 0 0; font-size: 1.04rem; color: var(--ink-2); }
+    .limits { display: grid; gap: 18px; margin-top: 8px; }
+    .limit p.prior { font-size: .86rem; color: var(--faint); }
+
+    /* ---------- method ---------- */
+    .figure { margin: 18px 0 0; padding: 18px; }
+    .figure img { display: block; width: 100%; min-width: 640px; height: auto; }
+    .phase { margin-top: 54px; }
+    .phase h3.ph { margin: 10px 0 12px; font: 700 clamp(1.35rem, 2.6vw, 1.85rem)/1.15 var(--display); letter-spacing: -.025em; }
+    .lift { color: var(--cin-ink); background: var(--cin-soft); padding: 0 4px; border-radius: 2px; }
+    .flow2 { display: block; width: 100%; min-width: 760px; height: auto; }
+    .flow2 .t { font: 500 16px var(--mono); letter-spacing: .14em; }
+    .flow2 .h { font: 700 32px var(--display); letter-spacing: -.02em; }
+    .flow2 .h2 { font: 600 23px var(--display); }
+    .flow2 .h3 { font: 600 22px var(--display); }
+    .flow2 .p { font: 400 22px var(--display); }
+    .flow2 .m { font: 500 17px var(--mono); }
+    .p3 { display: grid; grid-template-columns: minmax(0, 1.25fr) 64px minmax(0, 1.75fr); grid-template-rows: auto auto; row-gap: 22px; margin-top: 18px; }
+    .p3 .in1 { grid-column: 1; grid-row: 1; } .p3 .in2 { grid-column: 1; grid-row: 2; }
+    .p3 .plan { grid-column: 3; grid-row: 1; } .p3 .fix { grid-column: 3; grid-row: 2; }
+    .p3 .wire { grid-column: 2; grid-row: 1 / 3; width: 100%; height: 100%; overflow: visible; display: block; }
+    .p3 .plan::after { box-shadow: none; }
+    .p3 .vlink { position: absolute; left: 50%; bottom: -27px; height: 26px; border-left: 2px solid var(--cin); }
+    .p3 .vlink::after { content: ""; position: absolute; left: -5px; bottom: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--cin); }
+    .p3 .big3 { color: var(--ink); margin: 8px 0 0; font: 700 1.18rem/1.25 var(--display); letter-spacing: -.015em; }
+    @media (max-width: 860px) { .p3 { grid-template-columns: 1fr; grid-template-rows: none; row-gap: 14px; } .p3 > * { grid-column: 1 !important; grid-row: auto !important; } .p3 .wire, .p3 .vlink { display: none; } }
+
+    /* ---------- results ---------- */
+    .when { display: inline-block; margin-top: 4px; padding: 5px 10px; border: 1px solid rgba(184,137,63,.6); background: rgba(233,213,138,.14); font: 500 .7rem/1.3 var(--mono); color: var(--sand-ink); }
+    .chart { padding: 18px 16px 10px; margin-top: 4px; }
+    .chart svg.rq1 { display: block; width: 100%; min-width: 640px; height: auto; }
+    svg.rq1 .ax { font: 400 11px var(--mono); fill: var(--faint); }
+    svg.rq1 .val { font: 500 13px var(--mono); fill: var(--dim); }
+    svg.rq1 .val.ours { fill: var(--cin-ink); font-weight: 700; }
+    svg.rq1 .nm { font: 400 12.5px var(--display); fill: var(--dim); }
+    svg.rq1 .nm.ours { fill: var(--cin-ink); font-weight: 700; }
+    svg.rq1 .gn { font: 700 15px var(--display); fill: var(--ink); }
+    svg.rq1 .gg { font: 500 12.5px var(--mono); fill: var(--cin-ink); }
+    svg.rq1 .thread { font: 500 13px var(--mono); fill: var(--cin-ink); }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 6px 4px; font: 400 .7rem var(--mono); color: var(--dim); }
+    .legend i { display: inline-block; width: 11px; height: 11px; margin-right: 6px; vertical-align: -1px; }
+    .lollipop { padding: 4px 0; }
+    .lp-row { display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 20px; align-items: center; min-height: 46px; border-bottom: 1px solid rgba(22,28,26,.05); }
+    .lp-lab { font-size: .98rem; color: var(--dim); }
+    .lp-lab b { color: var(--ink); } .lp-lab b.lx { color: var(--cin-ink); }
+    .lp-track { position: relative; height: 22px; margin-right: 64px; }
+    .lp-stem { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 2px; background: rgba(140,145,142,.7); }
+    .lp-dot { position: absolute; top: 2px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--ash-ink); }
+    .lp-val { position: absolute; top: 1px; margin-left: 16px; font: 500 .92rem var(--mono); color: var(--dim); white-space: nowrap; }
+    .lp-row.jade .lp-stem, .lp-row.jade .lp-dot { background: var(--jade); }
+    .lp-row.ink .lp-stem, .lp-row.ink .lp-dot { background: var(--ink-2); }
+    .lp-row.ours .lp-stem, .lp-row.ours .lp-dot { background: var(--cin); }
+    .lp-row.ours .lp-val { color: var(--cin-ink); font-weight: 700; }
+    .lp-row.axis { border: 0; min-height: 0; }
+    .lp-axis { position: relative; height: 40px; margin-right: 64px; border-top: 1px solid var(--line-2); font: 400 .72rem var(--mono); color: var(--dim); }
+    .lp-axis span { position: absolute; top: 8px; transform: translateX(-50%); }
+    .lp-axis em { position: absolute; right: -64px; top: 24px; font-style: normal; font-size: .64rem; letter-spacing: .08em; }
+    @media (max-width: 700px) { .lp-row { grid-template-columns: 1fr; gap: 4px; padding: 8px 0; } .lp-row.axis .lp-lab { display: none; } }
+    .callouts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    @media (max-width: 760px) { .callouts { grid-template-columns: 1fr; } }
+    .callout { display: flex; align-items: center; gap: 18px; padding: 16px 20px; }
+    .callout .bign { font: 800 2.3rem/1 var(--display); letter-spacing: -.035em; color: var(--cin); white-space: nowrap; }
+    .callout .txt { font-size: .96rem; color: var(--dim); line-height: 1.4; }
+    .callout .txt b { display: block; }
+    table.heat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+    .heat th, .heat td { padding: 0 6px; font-weight: 400; }
+    .heat thead th { text-align: center; font: 700 1.05rem/1.1 var(--display); padding-bottom: 4px; }
+    .heat thead th span { display: block; margin-top: 4px; font: 400 .6rem var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+    .heat thead th.tot { text-align: left; color: var(--dim); }
+    .heat tbody th { text-align: right; padding-right: 14px; color: var(--dim); font-size: .98rem; width: 32%; }
+    .heat td.c { width: 15%; }
+    .heat td.c span { display: flex; align-items: center; justify-content: center; height: 36px; border: 1px solid var(--line); border-radius: 3px; font: 500 .95rem var(--mono); }
+    .heat td.c span.z { color: rgba(22,28,26,.25); }
+    .heat td.tot { padding-left: 16px; white-space: nowrap; }
+    .heat .tb { display: inline-block; width: calc(100% - 36px); height: 9px; vertical-align: middle; }
+    .heat .tb i { display: block; height: 100%; border-radius: 2px; background: rgba(22,28,26,.22); }
+    .heat td.tot b { margin-left: 8px; font: 500 .95rem var(--mono); color: var(--dim); }
+    .heat tr.top > * { border-top: 2px solid var(--cin); border-bottom: 2px solid var(--cin); padding-top: 4px; padding-bottom: 4px; }
+    .heat tr.top > :first-child { border-left: 2px solid var(--cin); border-radius: 6px 0 0 6px; color: var(--ink); font-weight: 700; }
+    .heat tr.top > :last-child { border-right: 2px solid var(--cin); border-radius: 0 6px 6px 0; }
+    .heat tr.top .tb i { background: var(--cin); } .heat tr.top td.tot b { color: var(--cin-ink); font-weight: 700; }
+    @media (max-width: 640px) {
+      .heat-box { padding: 14px 10px; }
+      table.heat { table-layout: fixed; }
+      .heat thead th { font-size: .8rem; } .heat thead th span { display: none; }
+      .heat tbody th { text-align: left; font-size: .8rem; line-height: 1.25; padding-right: 6px; width: 34%; }
+      .heat th, .heat td { padding: 0 2px; } .heat td.c span { height: 30px; font-size: .82rem; }
+      .heat .tb { display: none; } .heat td.tot { padding-left: 6px; } .heat td.tot b { margin: 0; }
+    }
+    .dprow { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); align-items: center; gap: 0 6px; margin-top: 10px; }
+    .dprow .pr { padding: 10px 14px; border: 1px solid rgba(47,143,108,.45); background: var(--jade-soft); border-radius: 3px; font-weight: 600; }
+    .dprow .pr span { display: block; font: 400 .66rem var(--mono); color: var(--dim); letter-spacing: .04em; }
+    .dprow .ar { text-align: center; font-family: var(--mono); color: var(--jade-ink); }
+    .dprow .ac { color: var(--ink-2); }
+    .dprow.no .pr { border-color: var(--line-2); background: rgba(22,28,26,.03); color: var(--dim); }
+    .dprow.no .ar { color: var(--ash-ink); }
+    @media (max-width: 640px) { .dprow { grid-template-columns: 1fr; } .dprow .ar { text-align: left; } }
+    .takebox { margin-top: 16px; padding: 14px 20px; border-left: 3px solid var(--cin); background: var(--cin-soft); font: 500 clamp(1.08rem, 2vw, 1.3rem)/1.4 var(--display); }
+    .takebox b { color: var(--cin-ink); }
+
+    /* ---------- outlook ---------- */
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+    @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+    .two .bign { margin-top: 6px; font: 800 2.2rem/1 var(--display); letter-spacing: -.035em; color: var(--ink); }
+
+    /* ---------- in practice (slide 12) ---------- */
+    .taxis { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    .taxis::before { content: ""; position: absolute; left: 2%; right: 1%; top: 33px; height: 2px; background: var(--line-2); }
+    .taxis::after { content: ""; position: absolute; right: 0; top: 27px; border: 7px solid transparent; border-left: 11px solid var(--line-2); }
+    .tcol { position: relative; min-width: 0; }
+    .tlab { display: block; text-align: center; font: 500 .7rem/1 var(--mono); letter-spacing: .2em; color: var(--dim); }
+    .tick { display: block; width: 16px; height: 16px; margin: 9px auto 14px; border-radius: 50%; background: var(--paper); border: 2px solid var(--dim); position: relative; z-index: 1; }
+    .tcol.hot .tlab { color: var(--cin-ink); } .tcol.hot .tick { background: var(--cin); border-color: var(--cin); }
+    .tcard { border: 1px solid var(--line); background: rgba(255,255,255,.7); padding: 14px 18px; border-radius: 2px; height: calc(100% - 50px); display: flex; flex-direction: column; }
+    .tcard > b { display: block; font-size: 1.2rem; } .tcol.hot .tcard > b { color: var(--cin-ink); }
+    .tcard > span { display: block; margin-top: 4px; color: var(--dim); font-size: .95rem; }
+    @media (max-width: 720px) { .taxis { grid-template-columns: 1fr; gap: 10px; } .taxis::before, .taxis::after, .tick { display: none; } .tlab { text-align: left; margin-bottom: 6px; } .tcard { height: auto; } }
+    .tpa { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; padding: 24px; align-items: stretch; }
+    .tpa-h { grid-column: 1 / -1; } .tpa-h p { max-width: none; }
+    @media (max-width: 760px) { .tpa { grid-template-columns: 1fr; } }
+    .tpa h3 { font-size: 1.3rem; }
+    .tpa .meta { margin-top: 10px; font-size: .9rem; color: var(--dim); }
+    .mode { border: 1px solid rgba(226,80,42,.35); border-radius: 3px; background: rgba(255,255,255,.75); padding: 16px 18px; }
+    .mode b { display: block; font-size: 1.15rem; }
+    .mode b span { margin-left: 8px; font: 500 .64rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--cin-ink); }
+    .mode p { margin: 8px 0 0; color: var(--dim); font-size: .95rem; }
+    .disc { margin-top: 14px; font-size: .9rem; color: var(--dim); max-width: 60em; }
+    .disc b { color: var(--ink-2); }
+
+    /* ---------- cite & footer ---------- */
+    .bib { position: relative; margin-top: 16px; padding: 20px 22px; background: #11161a; color: #ddd8cc; border-radius: 2px; }
+    .bib pre { margin: 0; overflow-x: auto; } .bib code { font: 400 .8rem/1.7 var(--mono); color: #ddd8cc; white-space: pre; }
+    .copy-btn { position: absolute; top: 14px; right: 14px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; font: 500 .7rem var(--mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+    .copy-btn.copied { background: var(--jade); border-color: var(--jade); }
+    @media (max-width: 520px) { .copy-btn { position: static; margin-bottom: 10px; } .bib code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .72rem; } }
+    .footer { margin-top: 56px; padding-top: 28px; padding-bottom: 56px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; font-size: .86rem; color: var(--dim); }
+    @media (max-width: 760px) { .footer { grid-template-columns: 1fr; } }
+    .footer a { color: var(--ink-2); }
+    .footer .links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font: 400 .72rem var(--mono); }
+
+    /* ---------- limitation boxes: text and visual side by side when there is room ---------- */
+    .limit-grid { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 32px; align-items: start; margin-top: 4px; }
+    .limit-grid p { font-size: .98rem; }
+    @media (max-width: 900px) { .limit-grid { grid-template-columns: 1fr; gap: 16px; } }
+    .docrow { display: grid; grid-template-columns: 88px minmax(0, 1fr) 88px; gap: 0 10px; align-items: start; margin-top: 6px; }
+    .doc { border: 1px solid var(--line-2); background: #fff; padding: 10px 12px 14px; min-height: 150px; }
+    .doc b { display: block; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid var(--line); font: 500 .64rem/1.25 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .doc i { display: block; height: 3px; margin-top: 12px; width: 92%; background: rgba(22,28,26,.18); }
+    .doc i.s { width: 60%; } .doc i.p { background: rgba(47,143,108,.7); width: 80%; } .doc i.m { background: rgba(226,80,42,.6); width: 70%; }
+    .mid { min-width: 0; }
+    .pairline { position: relative; margin: 26px 0 16px; border-top: 2px solid rgba(22,28,26,.45); }
+    .pairline::after { content: ""; position: absolute; right: -2px; top: -7px; border: 6px solid transparent; border-left: 10px solid rgba(22,28,26,.45); }
+    .pairline span { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); font: 500 .62rem/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+    .lost { padding: 12px 16px; border: 2px dashed rgba(226,80,42,.55); border-radius: 4px; background: rgba(226,80,42,.035); }
+    .lost .tag { color: var(--cin-ink); margin-bottom: 6px; }
+    .lost ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; color: var(--dim); }
+    .lost li b { display: inline; margin-right: 6px; }
+    .lost li b { color: var(--ink); }
+    @media (max-width: 600px) { .docrow { grid-template-columns: 1fr; gap: 8px; } .doc { min-height: 0; } .doc i { display: none; } .doc b { border: 0; margin: 0; padding: 0; } .pairline { display: none; } .lost ul { grid-template-columns: 1fr; } }
+
+    /* ---------- Phase 1 steps, stacked ---------- */
+    .step { margin-top: 18px; }
+    .step-h p { max-width: 50em; }
+    .acols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 36px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .acols > div { min-width: 0; }
+    @media (max-width: 760px) { .acols { grid-template-columns: 1fr; } }
+    .ahead { font-weight: 700; font-size: 1rem; white-space: nowrap; }
+    .ahead span { margin-left: 6px; font: 400 .62rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .awhy { margin: 1px 0 6px; font-style: italic; font-size: .88rem; color: var(--dim); }
+    .ag { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px dashed var(--line); }
+    .ag > b { font: 500 .62rem/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+    .orange .ag > b { color: var(--orange-ink); } .pink .ag > b { color: var(--pink-ink); }
+    .ag > div { display: flex; flex-wrap: wrap; gap: 5px; }
+    .ch { padding: 2px 8px; border: 1px solid var(--line-2); border-radius: 2px; background: rgba(255,255,255,.75); font-size: .86rem; color: var(--ink-2); }
+    .ch.lift { border-color: rgba(226,80,42,.5); background: var(--cin-soft); color: var(--cin-ink); }
+    .kq { margin: 16px 0 0; padding: 10px 14px; font-size: .94rem; color: var(--ink); line-height: 1.55; }
+    .kq .tag { color: var(--cin-ink); margin-bottom: 4px; }
+    .kq.s1 { background: var(--orange-soft); border-left: 3px solid var(--orange); }
+    .kq.s2 { background: var(--pink-soft); border-left: 3px solid var(--pink); }
+    .vjoin { position: relative; height: 40px; margin-left: 48px; border-left: 2px solid var(--cin); }
+    .vjoin::after { content: ""; position: absolute; left: -5px; bottom: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--cin); }
+    .vjoin span { position: absolute; left: 12px; top: 11px; font: 500 .64rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--cin-ink); }
+
+    /* ---------- left rail navigation (wide screens) ---------- */
+    .rail { display: none; }
+    @media (min-width: 1200px) {
+      body { padding-left: 224px; }
+      .topbar { display: none; }
+      .wrap { max-width: 1060px; }
+      .hero { padding-top: 64px; }
+      .rail { display: flex; flex-direction: column; position: fixed; z-index: 90; left: 0; top: 0; bottom: 0; width: 224px; padding: 30px 22px 24px 28px; border-right: 1px solid var(--line); background: rgba(247,246,242,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); overflow-y: auto; }
+      .rbrand { display: flex; gap: 10px; align-items: center; color: var(--ink); text-decoration: none; margin-bottom: 30px; }
+      .rbrand .h { font: 900 1.6rem/1 var(--han); color: var(--cin); }
+      .rbrand b { display: block; font-size: 1.05rem; } .rbrand small { display: block; font: 400 .64rem var(--mono); letter-spacing: .12em; color: var(--dim); }
+      .rail ol { list-style: none; margin: 0; padding: 0; }
+      .rail > ol > li { margin-bottom: 4px; }
+      .rail a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--dim); text-decoration: none; font-size: .9rem; line-height: 1.3; }
+      .rail > ol > li > a { font-weight: 600; color: var(--ink-2); }
+      .rail a i { font: 500 .66rem var(--mono); font-style: normal; color: var(--faint); margin-right: 8px; letter-spacing: .06em; }
+      .rail ol ol a { font-size: .8rem; padding: 3px 0 3px 30px; }
+      .rail a:hover { color: var(--cin-ink); }
+      .rail a.on { color: var(--cin-ink); border-left-color: var(--cin); }
+      .rail a.on i { color: var(--cin-ink); }
+      .rlinks { margin-top: auto; display: flex; gap: 10px; padding-top: 18px; }
+      .rlinks a { padding: 6px 10px; border: 1px solid var(--line-2); font: 500 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+    }
+
+    .figwrap { position: relative; min-width: 640px; }
+    .figwrap img { min-width: 0; }
+    .pbadge { position: absolute; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; background: var(--ink); color: #fff; text-decoration: none; font: 500 .66rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    .pbadge b { display: grid; place-items: center; width: 18px; height: 18px; background: var(--cin); color: #fff; font-weight: 700; }
+    .pbadge:hover { background: var(--cin-ink); }
+    .phase .kicker b { display: inline-grid; place-items: center; width: 18px; height: 18px; background: var(--cin); color: #fff; font-weight: 700; letter-spacing: 0; }
+    .phase .kicker.num::before { display: none; }
+
+    /* ---------- section openers: kicker, one-line heading, then text at full width ---------- */
+    .shead, .phead { display: block; }
+    .shead h2 { margin: 12px 0 14px; }
+    .phead h3.ph { margin: 10px 0 10px; }
+    .shead .prose, .phead .prose { max-width: none; }
+    .shead .prose p, .phead .prose p { font-size: 1.04rem; }
+    .shead .prose p.lede { font-size: 1.14rem; }
+    .shead .prose > :last-child, .phead .prose > :last-child { margin-bottom: 0; }
+    .shead + * { margin-top: 26px; }
+    .phead + * { margin-top: 20px; }
+    .read { max-width: none; }
+    .read .note { grid-column: 1 / -1; }
+    @media (max-width: 760px) { .read { grid-template-columns: 1fr; } }
+    .dev .cap { margin-top: 10px; font-size: .88rem; }
+    .kq-note { margin: 10px 0 0 !important; font-size: .9rem !important; }
+    .limit .prior { margin-top: 14px; }
+    .ex { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line-2); flex: 1; }
+    .exh { display: block; margin-bottom: 6px; font: 500 .62rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .tcol.hot .exh { color: var(--cin-ink); }
+    .exh i { font-style: normal; margin-left: 6px; padding: 1px 5px; border: 1px solid var(--line-2); text-transform: none; letter-spacing: .02em; }
+    .ex ol, .ex ul { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--ink-2); line-height: 1.45; }
+    .ex li + li { margin-top: 4px; }
+    .ex code { font-size: .82em; }
+    .ex li b { color: var(--ink); margin-right: 6px; }
+    .kq p { margin: 2px 0 4px; color: var(--ink); font-size: .94rem; }
+    .kq ol, .kq ul { margin: 0; padding-left: 20px; }
+    .kq li { margin-top: 2px; }
+    .kq2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+    @media (max-width: 640px) { .kq2 { grid-template-columns: 1fr; } }
+    .limits > .limit:first-child .limit-grid { align-items: center; }
+
+    /* ---------- language switch (EN / 中文) ---------- */
+    .lang { display: inline-flex; border: 1px solid var(--line-2); background: rgba(247,246,242,.92); font: 500 .7rem/1 var(--mono); letter-spacing: .08em; }
+    .lang a { padding: 6px 9px; color: var(--dim); text-decoration: none; border: 0 !important; }
+    .lang a + a { border-left: 1px solid var(--line-2) !important; }
+    .lang a[aria-current="page"] { background: var(--ink); color: #fff; }
+    .lang a:not([aria-current]):hover { color: var(--cin-ink); }
+    .lang.in-rail { display: none; }
+    @media (min-width: 1200px) { .lang.in-rail { display: inline-flex; align-self: flex-start; margin: -12px 0 26px; } }
+    @media (max-width: 420px) { .nav a[href="#results"] { display: none; } .nav { gap: 10px; } }
+    /* ---------- Chinese typography ---------- */
+    html[lang="zh-Hans"] body { font-family: var(--display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif; line-height: 1.75; }
+    html[lang="zh-Hans"] .tag, html[lang="zh-Hans"] .kicker, html[lang="zh-Hans"] .rail a i, html[lang="zh-Hans"] .ag > b,
+    html[lang="zh-Hans"] .tlab, html[lang="zh-Hans"] .exh, html[lang="zh-Hans"] .redline, html[lang="zh-Hans"] .note,
+    html[lang="zh-Hans"] .hnote, html[lang="zh-Hans"] .when, html[lang="zh-Hans"] .pairline span, html[lang="zh-Hans"] .vjoin span,
+    html[lang="zh-Hans"] .ledger dd, html[lang="zh-Hans"] .btn, html[lang="zh-Hans"] .topbar {
+      font-family: var(--mono), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", monospace; letter-spacing: .06em; }
+    html[lang="zh-Hans"] .section h2, html[lang="zh-Hans"] h3, html[lang="zh-Hans"] h4, html[lang="zh-Hans"] .hero h1 { letter-spacing: 0; }
+    html[lang="zh-Hans"] .prose p, html[lang="zh-Hans"] .read p { line-height: 1.8; }
+    html[lang="zh-Hans"] .flow2 text { font-family: var(--display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; }
+    html[lang="zh-Hans"] .doc b { letter-spacing: .02em; white-space: nowrap; }
+    html[lang="zh-Hans"] .tag, html[lang="zh-Hans"] .kicker, html[lang="zh-Hans"] .ag > b, html[lang="zh-Hans"] .tlab, html[lang="zh-Hans"] .exh,
+    html[lang="zh-Hans"] .doc b, html[lang="zh-Hans"] .pairline span, html[lang="zh-Hans"] .vjoin span, html[lang="zh-Hans"] .btn,
+    html[lang="zh-Hans"] .topbar, html[lang="zh-Hans"] .pbadge, html[lang="zh-Hans"] .ahead span { text-transform: none; }
+    @media (min-width: 1200px) { .rail .lang a, .rail .lang a.on { padding: 6px 9px; font: inherit; line-height: 1; letter-spacing: inherit; border-left: 0; } .rail .lang a + a { border-left: 1px solid var(--line-2) !important; } .rail .lang a[aria-current="page"] { color: #fff; } }
+    /* related-plugin line under the hero buttons: tag + plain explanation */
+    .hplug { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 14px 0 0; font-size: .92rem; color: var(--ink); }
+    .ptag { display: inline-block; padding: 4px 9px; border: 1px solid rgba(226,80,42,.5); background: var(--cin-soft); color: var(--cin-ink); text-decoration: none;
+      font: 500 .68rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .ptag:hover { border-color: var(--cin); }
+    html[lang="zh-Hans"] .ptag { text-transform: none; letter-spacing: .06em; font-family: var(--mono), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; }
+    @media (max-width: 520px) { .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .actions .btn { justify-content: center; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#motivation">Skip to content</a>
+  <nav class="rail" aria-label="Sections">
+    <a class="rbrand" href="#top"><span class="h" lang="zh-Hans" aria-hidden="true">灵</span><span><b>Lingxi</b><small>ISSTA 2026</small></span></a>
+    <nav class="lang in-rail" aria-label="Language"><a href="index.html" hreflang="en" lang="en" aria-current="page">EN</a><a href="index.zh.html" hreflang="zh-Hans" lang="zh-Hans">中文</a></nav>
+    <ol>
+      <li><a href="#motivation"><i>01</i>Motivation</a></li>
+      <li><a href="#method"><i>02</i>Method</a>
+        <ol><li><a href="#phase1">Knowledge construction</a></li><li><a href="#phase2">Analysis scaling</a></li><li><a href="#phase3">Issue resolution</a></li></ol></li>
+      <li><a href="#results"><i>03</i>Evaluation</a>
+        <ol><li><a href="#rq1">RQ1 · effectiveness</a></li><li><a href="#rq2">RQ2 · ablation</a></li><li><a href="#rq3">RQ3 · knowledge aspects</a></li></ol></li>
+      <li><a href="#outlook"><i>04</i>Outlook</a></li>
+      <li><a href="#practice"><i>05</i>Discussion</a></li>
+      <li><a href="#cite"><i>06</i>Cite</a></li>
+    </ol>
+    <div class="rlinks"><a href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">Paper ↗</a><a href="#cite">BibTeX</a></div>
+  </nav>
+  <header class="topbar" id="navbar" aria-label="Page navigation">
+    <a class="brand" href="#top" aria-label="Lingxi, back to top"><span class="h" lang="zh-Hans" aria-hidden="true">灵</span><b>Lingxi</b><span class="sub">· ISSTA 2026</span></a>
+    <nav class="nav" aria-label="Sections, compact">
+      <a class="opt" href="#motivation">Motivation</a>
+      <a href="#method">Method</a>
+      <a href="#results">Results</a>
+      <a class="opt" href="#practice">Practice</a>
+      <a class="opt" href="#cite">Cite</a>
+      <a class="out" href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">Paper ↗</a>
+      <nav class="lang" aria-label="Language"><a href="index.html" hreflang="en" lang="en" aria-current="page">EN</a><a href="index.zh.html" hreflang="zh-Hans" lang="zh-Hans">中文</a></nav>
+    </nav>
+  </header>
+
+  <!-- ===================================================================== HERO -->
+  <section class="wrap hero" id="top">
+    <div class="kicker award">ISSTA 2026 · Distinguished Paper</div>
+    <h1>Lingxi<span class="han" lang="zh-Hans">灵犀</span></h1>
+    <div class="hero-grid">
+      <div>
+        <p class="ptitle">Repository-Level Issue Resolution Framework Enhanced by Procedural Knowledge Guided Scaling</p>
+        <p class="hsub">Experienced developers know something before they explore: how a kind of problem is diagnosed and fixed,
+          and why. Lingxi recovers this <strong>procedural knowledge</strong> from a repository's own history and puts it in front of
+          the coding agent, so that analysis, planning and fixing follow the procedure that fits the issue at hand.</p>
+        <p class="authors">Xu Yang<sup>1</sup>, Jiayuan Zhou<sup>2</sup>, Michael Pacheco<sup>2</sup>, Wenhan Zhu<sup>2</sup>,
+          Pengfei He<sup>1</sup>, Shaowei Wang<sup>1,∗</sup>, Kui Liu<sup>3</sup>, Ruiqi Pan<sup>3</sup></p>
+        <p class="affils"><sup>1</sup>University of Manitoba, Canada · <sup>2</sup>Huawei, Canada ·
+          <sup>3</sup>Huawei Software Engineering Application Technology Lab, China · <sup>∗</sup>Corresponding author</p>
+        <div class="actions" role="group" aria-label="Primary links">
+          <a class="btn primary" href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">Paper · arXiv</a>
+          <a class="btn" href="https://conf.researchr.org/details/issta-2026/issta-2026-research-papers/179/Lingxi-Repository-Level-Issue-Resolution-Framework-Enhanced-by-Procedural-Knowledge-" target="_blank" rel="noopener">ISSTA 2026</a>
+          <a class="btn" href="#method">How it works</a>
+          <a class="btn" href="#cite">BibTeX</a>
+        </div>
+        <p class="hplug"><a class="ptag" href="#practice">Related plugin: Lingxi Advisor</a><span>Built on the same idea, not a reproduction.</span></p>
+      </div>
+      <aside class="box hot ledger" aria-label="Headline results">
+        <span class="tag hot">Headline result · SWE-bench Verified</span>
+        <div class="big"><b>74.6</b><span>% Pass@1</span></div>
+        <p>with Claude 4 Sonnet. Above every compared framework on each of the three base models.</p>
+        <dl>
+          <div><dt>vs. the best compared framework, same model</dt><dd>+4.2 pp</dd></div>
+          <div><dt>Transferable knowledge vs. raw issue–patch pairs (218-issue ablation)</dt><dd class="j">+6.5 pp</dd></div>
+          <div><dt>Compared against</dt><dd>5 frameworks · 3 base models</dd></div>
+          <div><dt>Benchmark</dt><dd>500 real Python issues</dd></div>
+        </dl>
+      </aside>
+    </div>
+    <div class="claim takehome reveal"><span class="tag">Take-home</span><b>Knowledge comes first; exploration follows.</b> Give the agent
+      the procedural knowledge behind issues of the same kind, how they are understood, analyzed and fixed, and why, and its
+      exploration gains a direction for the issue at hand.</div>
+  </section>
+
+  <main>
+  <!-- ===================================================================== 01 MOTIVATION -->
+  <section class="wrap section" id="motivation">
+    <div class="shead reveal">
+      <div><div class="kicker">01 · Motivation</div>
+      <h2><em>Implicit knowledge</em> tells developers where to look.</h2></div>
+      <div class="prose"><p class="lede">How does an experienced developer approach an issue? Before they explore, they already know something.</p>
+      <p>While learning and working, developers build up implicit knowledge: how a kind of problem is understood, analyzed and solved.
+        A new problem rarely matches an old one exactly, so they draw a few shared patterns from many past cases, and together these
+        patterns guide where they look first. Knowledge comes first; exploration follows.</p></div>
+    </div>
+
+    <div class="box hot block reveal">
+      <span class="tag hot">An experienced developer</span>
+      <h3>Draws on what past cases share</h3>
+      <div class="dev">
+        <div><svg class="art devpath" viewBox="-10 -8 740 246" role="img" aria-label="From a slow page, many paths lead through the code. The developer follows one, through the view and the ORM to the N+1 queries, and rules out a side branch early. Three numbered steps mark the procedure along the path."><g font-family="JetBrains Mono" font-size="17"><line x1="34" y1="110" x2="150" y2="48" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="34" y1="110" x2="150" y2="110" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="34" y1="110" x2="150" y2="176" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="48" x2="290" y2="26" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="48" x2="290" y2="88" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="110" x2="290" y2="88" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="110" x2="290" y2="150" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="176" x2="290" y2="150" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="176" x2="290" y2="204" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="26" x2="430" y2="58" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="88" x2="430" y2="58" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="88" x2="430" y2="124" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="150" x2="430" y2="124" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="150" x2="430" y2="192" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="204" x2="430" y2="192" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="58" x2="560" y2="36" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="124" x2="560" y2="110" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="192" x2="560" y2="184" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="58" x2="560" y2="110" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="124" x2="560" y2="184" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><path d="M34,110 L150,110 L290,88 L430,124 L560,110" fill="none" stroke="#e2502a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M34,110 L150,48 L290,26" fill="none" stroke="#e2502a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".65"/><path d="M560,110 Q612,98 650,101" fill="none" stroke="#e2502a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="220" cy="99" r="13" fill="#e2502a"/><text x="220" y="105" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">1</text><circle cx="360" cy="106" r="13" fill="#e2502a"/><text x="360" y="112" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">2</text><circle cx="495" cy="117" r="13" fill="#e2502a"/><text x="495" y="123" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">3</text><circle cx="150" cy="176" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="290" cy="150" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="290" cy="204" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="430" cy="58" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="430" cy="192" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="560" cy="36" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="560" cy="184" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="150" cy="110" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="290" cy="88" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="430" cy="124" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="560" cy="110" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="150" cy="48" r="6" fill="#ffffff" stroke="#e2502a" stroke-width="2"/><circle cx="290" cy="26" r="6" fill="#ffffff" stroke="#e2502a" stroke-width="2"/><path d="M302,18 l0,16" stroke="#e2502a" stroke-width="3"/><text x="310" y="32" fill="rgba(22,28,26,0.68)">ruled out</text><circle cx="34" cy="110" r="10" fill="#ffffff" stroke="#161c1a" stroke-width="2"/><text x="0" y="150" fill="rgba(22,28,26,0.83)">slow page</text><text x="128" y="140" fill="rgba(22,28,26,0.83)">view</text><text x="272" y="74" fill="rgba(22,28,26,0.83)">ORM</text><circle cx="668" cy="100" r="17" fill="rgba(47,143,108,.12)" stroke="#2f8f6c" stroke-width="2.5"/><path d="M660,100 l6,6 l11,-12" stroke="#2f8f6c" stroke-width="3" fill="none"/><text x="596" y="140" fill="#1f6b4f" font-weight="600">N+1 queries</text></g></svg><p class="cap">Many paths lead away from a slow page. The developer follows one, through the view and the ORM to the per-item
+      queries, and rules out a side branch early. The numbered steps are the procedure; the <em>why</em> is what makes it reusable on
+      the next slow page, even in a different codebase. That is <strong>procedural knowledge</strong>: how a kind of problem is diagnosed
+      and fixed, and why. It is implicit: it lives in experience, not in the code.</p></div>
+        <div class="pk">
+          <span class="tag">Procedural knowledge</span>
+          <p class="q">When a page loads slowly:</p>
+          <ol><li><span>1</span>Count the database queries</li><li><span>2</span>Find the loop that issues them</li><li><span>3</span>Confirm it in the query log</li></ol>
+          <p class="why"><i>WHY</i>per-item queries, the N+1 problem, are a common cause.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="box block reveal">
+      <span class="tag dim">How coding agents explore today</span>
+      <h3>What a coding agent brings to the same situation: three ingredients</h3>
+      <div class="ingr"><span class="inum">1</span><div><b>The model's own knowledge</b><p>General programming know-how in its weights: strong, and growing with every model.</p></div><div><svg class="art nn" viewBox="0 0 330 92" role="img" aria-label="A small neural network, standing for general know-how stored in the model's weights."><g stroke="rgba(22,28,26,0.24)" stroke-width="1.2"><line x1="30" y1="18" x2="120" y2="8"/><line x1="30" y1="18" x2="120" y2="32"/><line x1="30" y1="18" x2="120" y2="56"/><line x1="30" y1="18" x2="120" y2="80"/><line x1="30" y1="46" x2="120" y2="8"/><line x1="30" y1="46" x2="120" y2="32"/><line x1="30" y1="46" x2="120" y2="56"/><line x1="30" y1="46" x2="120" y2="80"/><line x1="30" y1="74" x2="120" y2="8"/><line x1="30" y1="74" x2="120" y2="32"/><line x1="30" y1="74" x2="120" y2="56"/><line x1="30" y1="74" x2="120" y2="80"/><line x1="120" y1="8" x2="210" y2="8"/><line x1="120" y1="8" x2="210" y2="32"/><line x1="120" y1="8" x2="210" y2="56"/><line x1="120" y1="8" x2="210" y2="80"/><line x1="120" y1="32" x2="210" y2="8"/><line x1="120" y1="32" x2="210" y2="32"/><line x1="120" y1="32" x2="210" y2="56"/><line x1="120" y1="32" x2="210" y2="80"/><line x1="120" y1="56" x2="210" y2="8"/><line x1="120" y1="56" x2="210" y2="32"/><line x1="120" y1="56" x2="210" y2="56"/><line x1="120" y1="56" x2="210" y2="80"/><line x1="120" y1="80" x2="210" y2="8"/><line x1="120" y1="80" x2="210" y2="32"/><line x1="120" y1="80" x2="210" y2="56"/><line x1="120" y1="80" x2="210" y2="80"/><line x1="210" y1="8" x2="300" y2="32"/><line x1="210" y1="8" x2="300" y2="56"/><line x1="210" y1="32" x2="300" y2="32"/><line x1="210" y1="32" x2="300" y2="56"/><line x1="210" y1="56" x2="300" y2="32"/><line x1="210" y1="56" x2="300" y2="56"/><line x1="210" y1="80" x2="300" y2="32"/><line x1="210" y1="80" x2="300" y2="56"/></g><g fill="#ffffff" stroke="rgba(22,28,26,0.77)" stroke-width="1.6"><circle cx="30" cy="18" r="6"/><circle cx="30" cy="46" r="6"/><circle cx="30" cy="74" r="6"/><circle cx="120" cy="8" r="6"/><circle cx="120" cy="32" r="6"/><circle cx="120" cy="56" r="6"/><circle cx="120" cy="80" r="6"/><circle cx="210" cy="8" r="6"/><circle cx="210" cy="32" r="6"/><circle cx="210" cy="56" r="6"/><circle cx="210" cy="80" r="6"/><circle cx="300" cy="32" r="6"/><circle cx="300" cy="56" r="6"/></g></svg></div></div>
+      <div class="ingr"><span class="inum">2</span><div><b>The current repository</b><p>Its code and documents, as they are now.</p></div><div class="cd"><span>Codebase &amp; documents</span><svg class="art graph" viewBox="0 0 330 90" role="img" aria-label="A tangle of files and links, standing for the codebase and its documents."><g stroke="rgba(22,28,26,0.33)" stroke-width="1.3"><line x1="20" y1="16" x2="70" y2="15"/><line x1="20" y1="16" x2="20" y2="42"/><line x1="20" y1="16" x2="60" y2="39"/><line x1="20" y1="16" x2="11" y2="77"/><line x1="70" y1="15" x2="122" y2="17"/><line x1="70" y1="15" x2="60" y2="39"/><line x1="122" y1="17" x2="162" y2="10"/><line x1="122" y1="17" x2="123" y2="50"/><line x1="162" y1="10" x2="123" y2="50"/><line x1="162" y1="10" x2="176" y2="38"/><line x1="222" y1="15" x2="276" y2="17"/><line x1="222" y1="15" x2="176" y2="38"/><line x1="222" y1="15" x2="225" y2="44"/><line x1="276" y1="17" x2="311" y2="9"/><line x1="276" y1="17" x2="270" y2="48"/><line x1="311" y1="9" x2="270" y2="48"/><line x1="311" y1="9" x2="325" y2="48"/><line x1="20" y1="42" x2="60" y2="39"/><line x1="20" y1="42" x2="11" y2="77"/><line x1="20" y1="42" x2="56" y2="76"/><line x1="60" y1="39" x2="56" y2="76"/><line x1="123" y1="50" x2="108" y2="68"/><line x1="123" y1="50" x2="157" y2="71"/><line x1="176" y1="38" x2="225" y2="44"/><line x1="176" y1="38" x2="157" y2="71"/><line x1="176" y1="38" x2="213" y2="77"/><line x1="225" y1="44" x2="270" y2="48"/><line x1="225" y1="44" x2="213" y2="77"/><line x1="225" y1="44" x2="256" y2="80"/><line x1="270" y1="48" x2="325" y2="48"/><line x1="270" y1="48" x2="256" y2="80"/><line x1="270" y1="48" x2="320" y2="73"/><line x1="325" y1="48" x2="320" y2="73"/><line x1="11" y1="77" x2="56" y2="76"/><line x1="56" y1="76" x2="108" y2="68"/><line x1="108" y1="68" x2="157" y2="71"/><line x1="213" y1="77" x2="256" y2="80"/><line x1="256" y1="80" x2="320" y2="73"/></g><g fill="#ffffff" stroke="rgba(22,28,26,0.66)" stroke-width="1.4"><circle cx="20" cy="16" r="4"/><circle cx="70" cy="15" r="4"/><circle cx="122" cy="17" r="4"/><circle cx="162" cy="10" r="4"/><circle cx="222" cy="15" r="4"/><circle cx="276" cy="17" r="4"/><circle cx="311" cy="9" r="4"/><circle cx="20" cy="42" r="4"/><circle cx="60" cy="39" r="4"/><circle cx="123" cy="50" r="4"/><circle cx="176" cy="38" r="4"/><circle cx="225" cy="44" r="4"/><circle cx="270" cy="48" r="4"/><circle cx="325" cy="48" r="4"/><circle cx="11" cy="77" r="4"/><circle cx="56" cy="76" r="4"/><circle cx="108" cy="68" r="4"/><circle cx="157" cy="71" r="4"/><circle cx="213" cy="77" r="4"/><circle cx="256" cy="80" r="4"/><circle cx="320" cy="73" r="4"/></g></svg></div></div>
+      <div class="ingr"><span class="inum">3</span><div><b>Explore and traverse</b><p>Sample, branch, retry: many trajectories.</p></div><div><svg class="art traj" viewBox="0 0 712 120" role="img" aria-label="Many sampled trajectories fanning out from one start, most ending in a cross."><g><circle cx="40" cy="60" r="10" fill="#ffffff" stroke="#161c1a" stroke-width="2"></circle><path d="M40,60 C233,79 401,16 548,9" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M542.1514917695473,3.433045267489712 l12,12 M554.1514917695473,3.433045267489712 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C151,46 249,35 405,20" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M399.1090534979424,14.374944602722383 l12,12 M411.1090534979424,14.374944602722383 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C264,97 461,43 626,25" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M619.6777263374486,18.827955049066162 l12,12 M631.6777263374486,18.827955049066162 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C144,51 461,18 660,36" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M653.8575102880659,29.592076606521047 l12,12 M665.8575102880659,29.592076606521047 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C164,52 491,68 618,46" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M611.6484053497943,40.26730927508706 l12,12 M623.6484053497943,40.26730927508706 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C219,27 477,58 609,50" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M603.0504115226338,44.45365305476417 l12,12 M615.0504115226338,44.45365305476417 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C201,14 249,64 414,61" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M408.0635288065844,54.95110794555239 l12,12 M420.0635288065844,54.95110794555239 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C163,48 303,39 473,62" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M466.6877572016461,55.759673947451724 l12,12 M478.6877572016461,55.759673947451724 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C160,56 391,69 565,75" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M558.9230967078189,69.27935106046218 l12,12 M570.9230967078189,69.27935106046218 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C244,76 347,96 471,76" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M464.76954732510285,69.91013928458372 l12,12 M476.76954732510285,69.91013928458372 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C149,35 504,62 630,86" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M624.227109053498,80.0520386198164 l12,12 M636.227109053498,80.0520386198164 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C248,76 365,113 493,90" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M487.2957818930041,83.70504906616017 l12,12 M499.2957818930041,83.70504906616017 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C275,21 344,84 500,100" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M493.97556584362144,93.66917062361506 l12,12 M505.97556584362144,93.66917062361506 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C122,13 274,129 430,110" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M424.2664609053498,103.54440329218107 l12,12 M436.2664609053498,103.54440329218107 l-12,12" stroke="#9aa19d" stroke-width="2"></path></g></svg></div></div>
+      <p class="ingr-plus">③ explores ② with ①. So, for this issue, will the right experience come to mind?</p>
+    </div>
+
+    <div class="phead block reveal" style="margin-top:48px">
+      <div><div class="kicker">What today's agents miss</div>
+      <h3 class="ph">Not reliably, for two reasons.</h3></div>
+      <div class="prose"><p>Current agents are good at exploring in general. Two things keep that exploration from being guided by the
+        procedure that fits the issue at hand.</p></div>
+    </div>
+    <div class="limits">
+      <article class="box ash limit reveal">
+        <span class="tag ash">Without task-specific direction <span class="refchip">③ exploration</span></span>
+        <h3>Knowing how to explore, but not how this issue is best explored</h3>
+        <div class="limit-grid">
+          <div>
+            <p>Models are trained on large amounts of code and already know, in general, how to explore a repository: search, read,
+              reproduce, test. What they cannot know in advance is how this task is best approached in this repository: which practice
+              applies, what to check first, and how the fix must fit the existing code.</p>
+            <p>Nothing ensures the right practice is recalled at the right moment, and private codebases were never in the training data.
+              So gains come from more attempts: more samples, more retries. Coverage grows; direction for this issue does not.</p>
+          </div>
+          <div><svg class="art scatter" viewBox="0 0 712 150" role="img" aria-label="Many sampled trajectories fan out from the issue; most end in a cross, one reaches a check mark."><g><circle cx="40" cy="75" r="10" fill="#ffffff" stroke="#161c1a" stroke-width="2"></circle><path d="M40,75 C204,117 331,9 496,17" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M489.5223765432099,10.66764403292181 l12,12 M501.5223765432099,10.66764403292181 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C277,68 237,33 367,18" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M360.7391975308642,11.54729740424185 l12,12 M372.7391975308642,11.54729740424185 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C136,92 345,32 528,36" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M522.2337962962963,29.649172997784113 l12,12 M534.2337962962963,29.649172997784113 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C153,100 239,57 430,39" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M424.0061728395062,32.973270813548595 l12,12 M436.0061728395062,32.973270813548595 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C222,137 331,34 512,56" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M506.05632716049377,49.5195908515353 l12,12 M518.0563271604938,49.5195908515353 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C236,112 376,84 554,65" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M548.3842592592592,59.28813311174423 l12,12 M560.3842592592592,59.28813311174423 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C249,71 535,50 667,72" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M660.9899691358024,66.27889759417538 l12,12 M672.9899691358024,66.27889759417538 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C153,59 484,77 630,80" fill="none" stroke="#2f8f6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M622.8734567901234,80.49188429882874 l5,5 l9,-10" stroke="#2f8f6c" stroke-width="3" fill="none"></path><path d="M40,75 C163,121 385,69 553,94" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M547.0347222222222,87.92709322570434 l12,12 M559.0347222222222,87.92709322570434 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C171,31 401,97 546,105" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M540.4737654320987,98.58452437480214 l12,12 M552.4737654320987,98.58452437480214 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C231,106 206,115 390,104" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M384.19058641975306,98.4641777461222 l12,12 M396.19058641975306,98.4641777461222 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C236,118 373,108 524,122" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M518.1851851851852,115.56605333966445 l12,12 M530.1851851851852,115.56605333966445 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C240,115 246,127 398,124" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M392.45756172839504,117.89015115542895 l12,12 M404.45756172839504,117.89015115542895 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C135,141 318,158 453,139" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M447.0077160493827,133.43647119341563 l12,12 M459.0077160493827,133.43647119341563 l-12,12" stroke="#9aa19d" stroke-width="2"></path></g></svg>
+            <p class="prior">In prior work: test-time scaling that samples many candidates and selects one, e.g. Trae, DARS, DEI.</p></div>
+        </div>
+      </article>
+      <article class="box ash limit reveal">
+        <span class="tag ash">At the surface <span class="refchip">procedural knowledge</span></span>
+        <h3>Procedural knowledge missing, or history reused as raw data</h3>
+        <div class="limit-grid">
+          <div>
+            <p>Many agents use none: they work from the code and documents as they are now, which record the current state but not how
+              similar issues were handled. Those that do draw on history reuse it as raw data: past issue reports and patches, retrieved
+              as text. What was changed survives; the procedure behind it is lost: how the issue was diagnosed, and why this fix.</p>
+            <p>A copied change helps only when the new issue looks almost the same. The procedure behind it is what carries over.</p>
+          </div>
+          <div><div class="docrow" role="img" aria-label="A past fix is kept as raw data: the issue report and the final patch. Lost in between is the procedural knowledge: how it was diagnosed, why this fix, how to verify, and how to fit in.">
+            <div class="doc"><b>Issue report</b><i></i><i></i><i class="s"></i><i></i></div>
+            <div class="mid"><div class="pairline"><span>kept as raw data</span></div>
+              <div class="lost"><span class="tag">Lost: procedural knowledge</span>
+                <ul><li><b>How it was diagnosed</b>root-cause steps</li><li><b>Why this fix</b>fix pattern</li><li><b>How to verify</b>checklist · tests</li><li><b>How to fit in</b>design practices</li></ul></div></div>
+            <div class="doc"><b>Final patch</b><i class="p"></i><i class="m"></i><i class="p"></i><i></i></div>
+          </div>
+            <p class="prior">In prior work: code graphs and ASTs of the current repository, e.g. Agentless, AutoCodeRover, CGM; similar
+              past issues as text, e.g. SemAgent.</p></div>
+        </div>
+      </article>
+    </div>
+    <div class="claim block reveal"><span class="tag">What Lingxi does</span>Lingxi recovers the procedure from the repository's own past
+      issues and their patches, abstracts it so it transfers to similar issues, and, when a new issue arrives, puts the relevant pieces
+      in front of the agent. The past fix is where the knowledge comes from; what the agent receives is the procedure.</div>
+  </section>
+
+  <!-- ===================================================================== 02 METHOD -->
+  <section class="wrap section" id="method">
+    <div class="shead reveal">
+      <div><div class="kicker">02 · Method</div>
+      <h2>Recover the procedure offline; <em>guide</em> every new issue.</h2></div>
+      <div class="prose"><p>Lingxi works in three phases. Phase 1 runs once per repository, over its history. Phases 2 and 3 run for each new issue:
+        the retrieved knowledge first steers the analysis, then the planning and the fix.</p></div>
+    </div>
+    <figure class="box figure reveal">
+      <div class="scroll"><div class="figwrap"><img src="assets/overview.svg" width="1203" height="495" loading="lazy" alt="Overview of Lingxi. Left, offline: a knowledge agent turns historical issue–patch pairs into issue-specific knowledge by reverse reasoning, then into transferable knowledge by abstraction, stored in a knowledge database. Right, online: a new issue retrieves and reranks knowledge; each piece guides its own analysis agent; the analyses are synthesized into a comprehensive analysis. Bottom: a planning agent and a fixing agent use that analysis and the issue-fixing knowledge to produce the final patch.">
+        <a class="pbadge" href="#phase1" style="left:1.6%;top:12.4%"><b>1</b>Phase 1</a>
+        <a class="pbadge" href="#phase2" style="left:39.7%;top:11.1%"><b>2</b>Phase 2</a>
+        <a class="pbadge" href="#phase3" style="left:39.7%;top:60.2%"><b>3</b>Phase 3</a></div></div>
+      <div class="hint" aria-hidden="true">← swipe to see the full figure →</div>
+      <figcaption class="cap">Overview of Lingxi, simplified from Figure 3 of the paper. The numbered labels match the three phases described below: 1 knowledge construction, 2 knowledge-guided analysis scaling, 3 issue resolution.</figcaption>
+    </figure>
+
+    <!-- Phase 1 -->
+    <div class="phase" id="phase1">
+      <div class="phead reveal">
+        <div><div class="kicker num"><b>1</b>Phase 1 · offline knowledge construction</div>
+        <h3 class="ph">From <em>issue-specific</em> to <em>transferable</em> knowledge.</h3></div>
+        <div class="prose"><p>A past fix leaves only two things: the issue report and the final patch. The procedure in between is missing,
+          so a knowledge agent recovers it in two steps. In <strong>Step 1</strong> it reasons in reverse: it starts from the patch,
+          navigates the repository snapshot where the issue occurred, and explains why each edit fixes the issue. In <strong>Step 2</strong>
+          it abstracts the result so that it transfers to issues that are similar but not identical.</p>
+          <p>Knowledge is built per repository from its own history; for each target issue, only issues created before it are used.</p></div>
+      </div>
+      <div class="box orange step reveal">
+        <div class="step-h"><span class="tag orange">Step 1 · reverse reasoning</span><h4>Issue-specific knowledge</h4>
+          <p>Starting from the patch, the knowledge agent explains why each edit fixes the issue, along 14 aspects.</p></div>
+        <div class="acols">
+          <div><div class="ahead">Understanding <span>8 aspects</span></div><div class="awhy">What it takes to locate and comprehend the issue</div>
+            <div class="ag"><b>Code</b><div><span class="ch">relevant architecture</span><span class="ch">dependency analysis</span><span class="ch">call trace</span></div></div>
+            <div class="ag"><b>Problem</b><div><span class="ch">bug categorization</span><span class="ch lift">root-cause analysis</span><span class="ch">current vs. expected behavior</span></div></div>
+            <div class="ag"><b>Usage</b><div><span class="ch">example usage context</span><span class="ch">feature / functionality</span></div></div></div>
+          <div><div class="ahead">Fixing <span>6 aspects</span></div><div class="awhy">What it takes to fix it and verify the fix</div>
+            <div class="ag"><b>Change</b><div><span class="ch">fix pattern</span><span class="ch">concrete fix steps</span></div></div>
+            <div class="ag"><b>Verify</b><div><span class="ch">fix checklist</span><span class="ch">test case</span></div></div>
+            <div class="ag"><b>Fit</b><div><span class="ch">design patterns &amp; code practices</span><span class="ch">resolution conclusion</span></div></div></div>
+        </div>
+        <blockquote class="kq s1"><span class="tag">Root-cause analysis · django #14200 · step 1</span>
+          <p>"The bug was caused by:</p>
+          <ol><li>Direct instantiation of <code>RegexURLResolver</code> instead of using the memoized <code>get_resolver()</code></li>
+            <li>Each request created a new <code>RegexURLResolver</code> instance, even when processing the same URLconf</li>
+            <li>The memoization optimization in <code>urlresolvers.get_resolver()</code> was bypassed</li>
+            <li>No consideration for memory/performance impact of creating new resolver instances"</li></ol></blockquote>
+      </div>
+      <div class="vjoin reveal" aria-hidden="true"><span>abstract</span></div>
+      <div class="box pink step reveal">
+        <div class="step-h"><span class="tag pink">Step 2 · abstraction</span><h4>Transferable knowledge</h4>
+          <p>The same knowledge, rewritten for a newcomer to the repository: general, actionable, and structured so later phases can use it.</p></div>
+        <div class="acols">
+          <div><div class="ahead">Understanding</div><div class="awhy">General and actionable</div>
+            <div class="ag"><b>Code</b><div><span class="ch">relevant architecture</span><span class="ch">dependency analysis</span><span class="ch">specific classes / methods</span></div></div>
+            <div class="ag"><b>Problem</b><div><span class="ch lift">general root-cause analysis steps</span><span class="ch">bug categorization</span><span class="ch">feature</span></div></div></div>
+          <div><div class="ahead">Fixing</div><div class="awhy">Ready for planning and fixing</div>
+            <div class="ag"><b>Change</b><div><span class="ch">general fix pattern</span></div></div>
+            <div class="ag"><b>Verify</b><div><span class="ch">general fix checklist</span></div></div>
+            <div class="ag"><b>Fit</b><div><span class="ch">design patterns &amp; code practices</span></div></div></div>
+        </div>
+        <blockquote class="kq s2"><span class="tag">General root-cause analysis steps · same issue · step 2</span>
+          <div class="kq2"><ol><li>"Identify the request handling flow and URL resolution process</li>
+              <li>Review how URL configuration is managed during request processing</li>
+              <li>Analyze object creation patterns and resource usage</li></ol>
+            <ol start="4"><li>Check for performance optimization opportunities like caching/memoization</li>
+              <li>Verify thread-safety and resource cleanup mechanisms</li>
+              <li>Test behavior with different URL configuration scenarios"</li></ol></div></blockquote>
+        <p class="kq-note">The issue: every request built a fresh URL resolver instead of reusing the cached one, wasting memory and time. Step 1 names
+          the class and the memoized function that was bypassed. Step 2 turns this into a way to diagnose similar problems in any codebase:
+          follow the request flow, look at which objects are created on every request, and check whether an existing cache is being bypassed.</p>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase" id="phase2">
+      <div class="phead reveal">
+        <div><div class="kicker num"><b>2</b>Phase 2 · knowledge-guided analysis scaling</div>
+        <h3 class="ph">One piece of knowledge per <em>analysis agent</em>.</h3></div>
+        <div class="prose"><p>A new issue arrives. Lingxi first summarizes it into four fields, then retrieves the knowledge of similar past
+          issues: an embedding search keeps the top 20, a reranker orders them, and the three most relevant are kept.</p>
+          <p><strong>Why one source per agent?</strong> Put all retrieved knowledge into one long prompt and the model tends to lose what is
+          buried in the middle. Instead, each piece of knowledge guides its own analysis agent: three pieces, three agents, each following
+          a different procedure and writing its own report. Analysis synthesis then keeps what is supportive, complementary, accurate and
+          complete, and produces one consolidated analysis. The relevant knowledge is no longer left to recall; it is put in front of the agent.</p></div>
+      </div>
+      <div class="box block reveal" style="padding:18px">
+        <div class="scroll"><svg class="flow2" viewBox="0 0 1680 430" role="img" aria-labelledby="p2t p2d"><title id="p2t">Phase 2: knowledge-guided analysis scaling</title>
+<desc id="p2d">The new issue is summarized into core problem, technical details, expected versus actual behavior, and relevant code. Similar past issues are retrieved. Knowledge 1, 2 and 3, each from a different past issue, go to analysis agents 1, 2 and 3; each agent sees the issue plus one piece of knowledge and writes a report. Analysis synthesis keeps what is supportive, complementary, accurate and complete, and produces one consolidated analysis.</desc>
+<rect x="0" y="10" width="300" height="400" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M0,24 V10 H14 M286,410 H300 V396" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="30" y="52" class="t" fill="#5b635f">NEW ISSUE</text>
+<text x="30" y="96" class="h" fill="#161c1a">Structured</text>
+<text x="30" y="132" class="h" fill="#161c1a">summary</text>
+<circle cx="38" cy="179" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="186" class="p" fill="#5b635f">Core problem</text>
+<circle cx="38" cy="229" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="236" class="p" fill="#5b635f">Technical details</text>
+<circle cx="38" cy="279" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="286" class="p" fill="#5b635f">Expected vs. actual</text>
+<circle cx="38" cy="329" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="336" class="p" fill="#5b635f">Relevant code</text>
+<rect x="350" y="140" width="190" height="130" fill="#f1f8f4" stroke="rgba(47,143,108,.55)"/>
+<path d="M350,154 V140 H364 M526,270 H540 V256" fill="none" stroke="#2f8f6c" stroke-width="2.5"/>
+<text x="374" y="180" class="t" fill="#1f6b4f">RETRIEVE</text>
+<text x="374" y="216" class="p" fill="#5b635f">similar past</text>
+<text x="374" y="244" class="p" fill="#5b635f">issues</text>
+<path d="M300,210 C325.0,210 325.0,205 350,205" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="350" cy="205" r="4" fill="#e2502a"/>
+<rect x="590" y="20" width="230" height="100" fill="#fdf1f0" stroke="#e7a19d"/>
+<path d="M590,34 V20 H604 M806,120 H820 V106" fill="none" stroke="#d9706b" stroke-width="2.5"/>
+<text x="612" y="56" class="t" fill="#b0413c">KNOWLEDGE 1</text>
+<text x="612" y="92" class="p" fill="#5b635f">from past issue 1</text>
+<rect x="870" y="20" width="270" height="100" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M870,34 V20 H884 M1126,120 H1140 V106" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="892" y="56" class="t" fill="#5b635f">ANALYSIS AGENT 1</text>
+<text x="892" y="92" class="p" fill="#5b635f">issue + knowledge 1</text>
+<rect x="1190" y="20" width="200" height="100" rx="6" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<rect x="1212" y="55" width="30" height="30" rx="6" fill="#F8CECC"/>
+<text x="1256" y="78" class="h2" fill="#161c1a">Report 1</text>
+<path d="M540,205 C565.0,205 565.0,70 590,70" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<circle cx="590" cy="70" r="4" fill="#2f8f6c"/>
+<path d="M820,70 C845.0,70 845.0,70 870,70" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="870" cy="70" r="4" fill="#e2502a"/>
+<path d="M1140,70 C1165.0,70 1165.0,70 1190,70" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1190" cy="70" r="4" fill="#e2502a"/>
+<path d="M1390,70 C1415.0,70 1415.0,215 1440,215" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1440" cy="215" r="4" fill="#e2502a"/>
+<rect x="590" y="150" width="230" height="100" fill="#fdf1f0" stroke="#e7a19d"/>
+<path d="M590,164 V150 H604 M806,250 H820 V236" fill="none" stroke="#d9706b" stroke-width="2.5"/>
+<text x="612" y="186" class="t" fill="#b0413c">KNOWLEDGE 2</text>
+<text x="612" y="222" class="p" fill="#5b635f">from past issue 2</text>
+<rect x="870" y="150" width="270" height="100" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M870,164 V150 H884 M1126,250 H1140 V236" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="892" y="186" class="t" fill="#5b635f">ANALYSIS AGENT 2</text>
+<text x="892" y="222" class="p" fill="#5b635f">issue + knowledge 2</text>
+<rect x="1190" y="150" width="200" height="100" rx="6" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<rect x="1212" y="185" width="30" height="30" rx="6" fill="#FFE6A6"/>
+<text x="1256" y="208" class="h2" fill="#161c1a">Report 2</text>
+<path d="M540,205 C565.0,205 565.0,200 590,200" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<circle cx="590" cy="200" r="4" fill="#2f8f6c"/>
+<path d="M820,200 C845.0,200 845.0,200 870,200" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="870" cy="200" r="4" fill="#e2502a"/>
+<path d="M1140,200 C1165.0,200 1165.0,200 1190,200" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1190" cy="200" r="4" fill="#e2502a"/>
+<path d="M1390,200 C1415.0,200 1415.0,215 1440,215" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1440" cy="215" r="4" fill="#e2502a"/>
+<rect x="590" y="280" width="230" height="100" fill="#fdf1f0" stroke="#e7a19d"/>
+<path d="M590,294 V280 H604 M806,380 H820 V366" fill="none" stroke="#d9706b" stroke-width="2.5"/>
+<text x="612" y="316" class="t" fill="#b0413c">KNOWLEDGE 3</text>
+<text x="612" y="352" class="p" fill="#5b635f">from past issue 3</text>
+<rect x="870" y="280" width="270" height="100" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M870,294 V280 H884 M1126,380 H1140 V366" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="892" y="316" class="t" fill="#5b635f">ANALYSIS AGENT 3</text>
+<text x="892" y="352" class="p" fill="#5b635f">issue + knowledge 3</text>
+<rect x="1190" y="280" width="200" height="100" rx="6" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<rect x="1212" y="315" width="30" height="30" rx="6" fill="#A9CCF2"/>
+<text x="1256" y="338" class="h2" fill="#161c1a">Report 3</text>
+<path d="M540,205 C565.0,205 565.0,330 590,330" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<circle cx="590" cy="330" r="4" fill="#2f8f6c"/>
+<path d="M820,330 C845.0,330 845.0,330 870,330" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="870" cy="330" r="4" fill="#e2502a"/>
+<path d="M1140,330 C1165.0,330 1165.0,330 1190,330" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1190" cy="330" r="4" fill="#e2502a"/>
+<path d="M1390,330 C1415.0,330 1415.0,215 1440,215" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1440" cy="215" r="4" fill="#e2502a"/>
+<rect x="1440" y="10" width="240" height="400" fill="#fdf0eb" stroke="rgba(226,80,42,.6)"/>
+<path d="M1440,24 V10 H1454 M1666,410 H1680 V396" fill="none" stroke="#e2502a" stroke-width="2.5"/>
+<text x="1464" y="52" class="t" fill="#b93c1b">ANALYSIS</text>
+<text x="1464" y="76" class="t" fill="#b93c1b">SYNTHESIS</text>
+<circle cx="1472" cy="123" r="5" fill="#e2502a"/>
+<text x="1488" y="130" class="h3" fill="#161c1a">Supportive</text>
+<circle cx="1472" cy="167" r="5" fill="#e2502a"/>
+<text x="1488" y="174" class="h3" fill="#161c1a">Complementary</text>
+<circle cx="1472" cy="211" r="5" fill="#e2502a"/>
+<text x="1488" y="218" class="h3" fill="#161c1a">Accurate</text>
+<circle cx="1472" cy="255" r="5" fill="#e2502a"/>
+<text x="1488" y="262" class="h3" fill="#161c1a">Complete</text>
+<text x="1464" y="350" class="m" fill="#b93c1b">→ one consolidated</text>
+<text x="1464" y="376" class="m" fill="#b93c1b">analysis</text>
+</svg></div>
+        <div class="hint" aria-hidden="true">← swipe to see the whole flow →</div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase" id="phase3">
+      <div class="phead reveal">
+        <div><div class="kicker num"><b>3</b>Phase 3 · issue resolution</div>
+        <h3 class="ph">Plan and fix with <em>analysis and issue-fixing knowledge</em>.</h3></div>
+        <div class="prose"><p>The analysis says what is wrong; Phase 3 turns it into a patch with two agents. The issue-fixing part of the
+          retrieved knowledge guides both of them.</p></div>
+      </div>
+      <div class="p3 reveal">
+        <div class="box in1"><span class="tag dim">From phase 2</span><h4>Consolidated analysis</h4><p>Root cause · scope · constraints</p><p>What is wrong, where it sits in the code, and what the change must not break, merged from the parallel analyses.</p></div>
+        <div class="box pink in2"><span class="tag pink">From the knowledge base</span><h4>Issue-fixing knowledge</h4>
+          <ul class="plain"><li>General fix pattern</li><li>General fix checklist</li><li>Design patterns &amp; code practices</li></ul>
+          <p class="redline">→ shapes what the plan changes, and how the change fits the codebase</p></div>
+        <svg class="wire" aria-hidden="true"></svg>
+        <div class="box plan"><span class="tag dim">Planning agent</span><p class="big3">Explore → reproduce → plan</p>
+          <p>A root-cause assessment and a line-level change plan, informed by the analysis and the issue-fixing knowledge. The agent explores the code, reproduces the issue, and links each planned change to the problem it addresses.</p><span class="vlink" aria-hidden="true"></span></div>
+        <div class="box hot fix"><span class="tag hot">Fixing agent</span><p class="big3">Implement → test → refine</p>
+          <p>Apply the change, run the reproduction test, and refine until it passes: the final patch. The checklist tells it what to verify. Both agents work with four tools: directory view, file view, keyword search and a string-replace editor.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 03 RESULTS -->
+  <section class="wrap section" id="results">
+    <div class="shead reveal">
+      <div><div class="kicker">03 · Evaluation</div>
+      <h2>Does it pay off, and <em>which knowledge</em> helps?</h2></div>
+      <div class="prose"><p>All experiments use SWE-bench Verified: 500 real GitHub issues from 12 open-source Python projects, each checked by hidden tests.
+        Pass@1 is the share of issues whose single generated patch passes. For each target issue, knowledge comes only from issues created
+        before it.</p>
+      <span class="when">Experiments with commercial models completed before Sept 2025</span></div>
+    </div>
+
+    <div class="block-h reveal" id="rq1">
+      <div class="kicker">RQ1 · overall effectiveness</div>
+      <h3>With the <em>same base model</em>, Lingxi resolves the most issues.</h3>
+    </div>
+    <figure class="box chart reveal" style="margin:0">
+      <div class="legend" aria-hidden="true"><span><i style="background:#e2502a"></i>Lingxi</span><span><i style="background:#b3b8b5"></i>Compared framework, same base model</span><span>Pass@1 (%)</span></div>
+      <div class="scroll"><svg class="rq1" viewBox="0 0 960 452" role="img" aria-labelledby="rq1-t rq1-d">
+<title id="rq1-t">RQ1: Pass@1 on SWE-bench Verified, grouped by base model</title>
+<desc id="rq1-d">GPT-4.1 mini: mini-SWE-agent 23.94, Lingxi 45.20. Kimi-K2: mini-SWE-agent 43.80, OpenHands 65.40, Lingxi 70.33. Claude 4 Sonnet: mini-SWE-agent 64.93, SWE-agent 66.60, SWE-search 70.08, OpenHands 70.40, Augment v1 70.40, Lingxi 74.60.</desc>
+<line x1="40" x2="942" y1="281.0" y2="281.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="285.0" text-anchor="end" class="ax">20</text>
+<line x1="40" x2="942" y1="222.0" y2="222.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="226.0" text-anchor="end" class="ax">40</text>
+<line x1="40" x2="942" y1="163.0" y2="163.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="167.0" text-anchor="end" class="ax">60</text>
+<line x1="40" x2="942" y1="104.0" y2="104.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="108.0" text-anchor="end" class="ax">80</text>
+<rect x="46.0" y="269.4" width="48" height="70.6" fill="#b3b8b5"/>
+<text x="70.0" y="261.4" text-anchor="middle" class="val">23.94</text>
+<text x="70.0" y="360" text-anchor="middle" class="nm">mini-SWE-</text><text x="70.0" y="375" text-anchor="middle" class="nm">agent</text>
+<rect x="122.0" y="206.7" width="48" height="133.3" fill="#e2502a"/>
+<text x="146.0" y="198.7" text-anchor="middle" class="val ours">45.20</text>
+<text x="146.0" y="360" text-anchor="middle" class="nm ours">Lingxi</text>
+<line x1="40.0" x2="176.0" y1="390" y2="390" stroke="rgba(22,28,26,.3)"/>
+<text x="108.0" y="412" text-anchor="middle" class="gn">GPT-4.1 mini</text>
+<text x="108.0" y="432" text-anchor="middle" class="gg">Lingxi +21.3 pp</text>
+<rect x="242.0" y="210.8" width="48" height="129.2" fill="#b3b8b5"/>
+<text x="266.0" y="202.8" text-anchor="middle" class="val">43.80</text>
+<text x="266.0" y="360" text-anchor="middle" class="nm">mini-SWE-</text><text x="266.0" y="375" text-anchor="middle" class="nm">agent</text>
+<rect x="318.0" y="147.1" width="48" height="192.9" fill="#b3b8b5"/>
+<text x="342.0" y="139.1" text-anchor="middle" class="val">65.40</text>
+<text x="342.0" y="360" text-anchor="middle" class="nm">OpenHands</text>
+<rect x="394.0" y="132.5" width="48" height="207.5" fill="#e2502a"/>
+<text x="418.0" y="124.5" text-anchor="middle" class="val ours">70.33</text>
+<text x="418.0" y="360" text-anchor="middle" class="nm ours">Lingxi</text>
+<line x1="236.0" x2="448.0" y1="390" y2="390" stroke="rgba(22,28,26,.3)"/>
+<text x="342.0" y="412" text-anchor="middle" class="gn">Kimi-K2</text>
+<text x="342.0" y="432" text-anchor="middle" class="gg">Lingxi +4.9 pp</text>
+<rect x="514.0" y="148.5" width="48" height="191.5" fill="#b3b8b5"/>
+<text x="538.0" y="140.5" text-anchor="middle" class="val">64.93</text>
+<text x="538.0" y="360" text-anchor="middle" class="nm">mini-SWE-</text><text x="538.0" y="375" text-anchor="middle" class="nm">agent</text>
+<rect x="590.0" y="143.5" width="48" height="196.5" fill="#b3b8b5"/>
+<text x="614.0" y="135.5" text-anchor="middle" class="val">66.60</text>
+<text x="614.0" y="360" text-anchor="middle" class="nm">SWE-agent</text>
+<rect x="666.0" y="133.3" width="48" height="206.7" fill="#b3b8b5"/>
+<text x="690.0" y="125.3" text-anchor="middle" class="val">70.08</text>
+<text x="690.0" y="360" text-anchor="middle" class="nm">SWE-search</text>
+<rect x="742.0" y="132.3" width="48" height="207.7" fill="#b3b8b5"/>
+<text x="766.0" y="124.3" text-anchor="middle" class="val">70.40</text>
+<text x="766.0" y="360" text-anchor="middle" class="nm">OpenHands</text>
+<rect x="818.0" y="132.3" width="48" height="207.7" fill="#b3b8b5"/>
+<text x="842.0" y="124.3" text-anchor="middle" class="val">70.40</text>
+<text x="842.0" y="360" text-anchor="middle" class="nm">Augment v1</text>
+<rect x="894.0" y="119.9" width="48" height="220.1" fill="#e2502a"/>
+<text x="918.0" y="111.9" text-anchor="middle" class="val ours">74.60</text>
+<text x="918.0" y="360" text-anchor="middle" class="nm ours">Lingxi</text>
+<line x1="508.0" x2="948.0" y1="390" y2="390" stroke="rgba(22,28,26,.3)"/>
+<text x="728.0" y="412" text-anchor="middle" class="gn">Claude 4 Sonnet</text>
+<text x="728.0" y="432" text-anchor="middle" class="gg">Lingxi +4.2 pp</text>
+<line x1="40" x2="942" y1="340" y2="340" stroke="rgba(22,28,26,.5)"/>
+<path d="M146.0,176.7 C236.0,106.7 298.0,102.5 418.0,102.5 S758.0,83.9 918.0,89.9" fill="none" stroke="#e2502a" stroke-width="2.5"/>
+<circle cx="146.0" cy="176.7" r="6" fill="#e2502a"/>
+<circle cx="418.0" cy="102.5" r="6" fill="#e2502a"/>
+<circle cx="918.0" cy="89.9" r="6" fill="#e2502a"/>
+<text x="86.0" y="68" class="thread">Same framework, stronger model → 45.2 · 70.3 · 74.6</text>
+</svg></div>
+      <div class="hint" aria-hidden="true">← swipe to see all three groups →</div>
+    </figure>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>Each group uses one base model, so within a group only the framework differs. The baselines are
+        the top leaderboard entries that use the same base model; multi-model ensembles are excluded.</p>
+      <p><span class="tag">What it shows</span>With Claude 4 Sonnet, Lingxi reaches 74.6%, 4.2 points above the strongest compared frameworks,
+        OpenHands and Augment v1 (70.4%). With Kimi-K2, 70.3 versus 65.4. With GPT-4.1 mini, Lingxi nearly doubles mini-SWE-agent: 45.2
+        versus 23.9. Across groups, a stronger model lifts the same framework (the red line), and Lingxi is on top in every group. The
+        knowledge adds to the model; it does not replace it.</p>
+    </div>
+
+    <div class="block-h reveal" id="rq2">
+      <div class="kicker">RQ2 · ablation · 218 sampled issues · Claude 4 Sonnet</div>
+      <h3>The gain comes from <em>transferable knowledge</em>; parallel analysis builds on it.</h3>
+    </div>
+    <div class="box reveal"><div class="lollipop" role="img" aria-label="RQ2 ablation, Pass@1 on 218 issues with Claude 4 Sonnet: no knowledge, single analysis 67.43; no knowledge, parallel analysis 67.74; raw issue–patch pairs, parallel analysis 68.30; transferable knowledge, single analysis 72.48; Lingxi, transferable knowledge with parallel analysis 74.80."><div class="lp-row ash"><div class="lp-lab">No knowledge · <b>single analysis</b></div><div class="lp-track"><span class="lp-stem" style="width:14.3%"></span><span class="lp-dot" style="left:14.3%"></span><span class="lp-val" style="left:14.3%">67.43</span></div></div><div class="lp-row ash"><div class="lp-lab">No knowledge · <b>+ parallel analysis</b></div><div class="lp-track"><span class="lp-stem" style="width:17.4%"></span><span class="lp-dot" style="left:17.4%"></span><span class="lp-val" style="left:17.4%">67.74</span></div></div><div class="lp-row jade"><div class="lp-lab">Raw issue–patch pairs · <b>+ parallel analysis</b></div><div class="lp-track"><span class="lp-stem" style="width:23.0%"></span><span class="lp-dot" style="left:23.0%"></span><span class="lp-val" style="left:23.0%">68.30</span></div></div><div class="lp-row ink"><div class="lp-lab">Transferable knowledge · <b>single analysis</b></div><div class="lp-track"><span class="lp-stem" style="width:64.8%"></span><span class="lp-dot" style="left:64.8%"></span><span class="lp-val" style="left:64.8%">72.48</span></div></div><div class="lp-row ours"><div class="lp-lab"><b class="lx">Lingxi</b> · transferable knowledge · <b>+ parallel analysis</b></div><div class="lp-track"><span class="lp-stem" style="width:88.0%"></span><span class="lp-dot" style="left:88.0%"></span><span class="lp-val" style="left:88.0%">74.80</span></div></div><div class="lp-row axis" aria-hidden="true"><div class="lp-lab"></div><div class="lp-axis"><span style="left:0%">66</span><span style="left:20%">68</span><span style="left:40%">70</span><span style="left:60%">72</span><span style="left:80%">74</span><span style="left:100%">76</span><em>Pass@1 (%)</em></div></div></div></div>
+    <div class="callouts reveal">
+      <div class="box hot callout"><span class="bign">+6.5 pp</span><span class="txt"><b>Raw pairs → transferable knowledge</b>68.30 → 74.80, both with parallel analysis</span></div>
+      <div class="box callout"><span class="bign">+2.3 pp</span><span class="txt"><b>Parallel analysis, guided by knowledge</b>72.48 → 74.80, both with transferable knowledge</span></div>
+    </div>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>Where does the gain come from: the knowledge, or the parallel agents? Each row removes or replaces
+        one part of Lingxi. The 218 issues are a statistical sample (95% confidence, 5% margin of error).</p>
+      <p><span class="tag">What it shows</span>Without knowledge, Pass@1 is 67.4 to 67.7. Raw issue–patch pairs, the fix without the procedure,
+        reach 68.3. Transferable procedural knowledge brings the largest step, to 74.8. Parallel analysis builds on that: with knowledge it
+        adds 2.3 points, because each path follows its own piece of knowledge and the findings combine; without knowledge, parallel analyses
+        of the same issue report land close to a single one. The two work together.</p>
+      <p class="note">Differences are absolute percentage points; the paper's Table 3 reports the same results as relative Δ. The 218-issue
+        subset is a different scope from the 500-issue results in RQ1.</p>
+    </div>
+
+    <div class="block-h reveal" id="rq3">
+      <div class="kicker">RQ3 · which knowledge helps, and when</div>
+      <h3><em>Design practices</em> matter most, and roles shift by stage.</h3>
+    </div>
+    <div class="box heat-box reveal"><table class="heat"><caption class="sr-only">Number of the 20 issues in which each knowledge aspect was decisive, by stage</caption>
+<thead><tr><th scope="col"><span class="sr-only">Knowledge aspect</span></th><th scope="col">Analysis<span>stage 1</span></th><th scope="col">Planning<span>stage 2</span></th><th scope="col">Fixing<span>stage 3</span></th><th scope="col" class="tot">Total<span>all stages</span></th></tr></thead><tbody>
+<tr><th scope="row">Root-cause analysis steps</th><td class="c"><span style="background:rgba(226,80,42,0.69);color:#fff">7</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:47%"></i></span><b>7</b></td></tr>
+<tr><th scope="row">Relevant architecture</th><td class="c"><span style="background:rgba(226,80,42,0.69);color:#fff">7</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:47%"></i></span><b>7</b></td></tr>
+<tr><th scope="row">Bug categorization</th><td class="c"><span style="background:rgba(226,80,42,0.37);color:#161c1a">3</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:20%"></i></span><b>3</b></td></tr>
+<tr><th scope="row">Feature / functionality</th><td class="c"><span style="background:rgba(226,80,42,0.37);color:#161c1a">3</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:20%"></i></span><b>3</b></td></tr>
+<tr class="top"><th scope="row">Design patterns &amp; coding practices</th><td class="c"><span class="z">·</span></td><td class="c"><span style="background:rgba(226,80,42,1.0);color:#fff">11</span></td><td class="c"><span style="background:rgba(226,80,42,0.45);color:#161c1a">4</span></td><td class="tot"><span class="tb"><i style="width:100%"></i></span><b>15</b></td></tr>
+<tr><th scope="row">General fix pattern</th><td class="c"><span class="z">·</span></td><td class="c"><span style="background:rgba(226,80,42,0.61);color:#fff">6</span></td><td class="c"><span style="background:rgba(226,80,42,0.77);color:#fff">8</span></td><td class="tot"><span class="tb"><i style="width:93%"></i></span><b>14</b></td></tr>
+<tr><th scope="row">Fix checklist</th><td class="c"><span class="z">·</span></td><td class="c"><span style="background:rgba(226,80,42,0.37);color:#161c1a">3</span></td><td class="c"><span style="background:rgba(226,80,42,0.77);color:#fff">8</span></td><td class="tot"><span class="tb"><i style="width:73%"></i></span><b>11</b></td></tr>
+</tbody></table></div>
+    <div class="read reveal">
+      <p><span class="tag">How to read</span>We took 20 issues that Lingxi resolved and its knowledge-free variant did not. Two authors compared
+        the two trajectories of each and marked which knowledge aspect was decisive at each stage (Cohen's κ = 0.66). A number counts the
+        issues in which that aspect was decisive at that stage; each stage column sums to 20.</p>
+      <p><span class="tag">What it shows</span>In analysis, root-cause analysis steps and relevant architecture dominate. In planning, design
+        patterns and coding practices take over. In fixing, fix patterns and checklists lead. Overall, design patterns and coding practices
+        matter most.</p>
+    </div>
+    <div class="box jade block reveal">
+      <span class="tag">What a design practice looks like · sympy-23413</span>
+      <h4>The Hermite normal form is wrong for rectangular matrices.</h4>
+      <p>Two practices in the retrieved knowledge, from earlier sympy issues, became concrete actions in this issue:</p>
+      <div class="dprow"><div class="pr">Process the full structure, not a shape heuristic<span>from sympy #10785</span></div><div class="ar" aria-hidden="true">→</div><div class="ac">process all rows, not <code>min(m, n)</code></div></div>
+      <div class="dprow"><div class="pr">Add boundary guards<span>from sympy #17130</span></div><div class="ar" aria-hidden="true">→</div><div class="ac">stop when the columns run out: <code>if k &lt; 0: k = 0; break</code></div></div>
+      <div class="dprow no"><div class="pr">Same pipeline, without knowledge</div><div class="ar" aria-hidden="true">→</div><div class="ac">blamed the return statement, patched only the surface, and failed</div></div>
+      <p class="takebox">Models know these practices in general. Retrieved knowledge brings the <b>right one</b> to mind, for <b>this</b> issue.</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 04 OUTLOOK -->
+  <section class="wrap section" id="outlook">
+    <div class="shead reveal">
+      <div><div class="kicker">04 · Limitations &amp; outlook</div>
+      <h2>Knowledge helps most when the agent <em>follows</em> it.</h2></div>
+      <div class="prose"><p>127 of the 500 issues remain unresolved. We sampled 20 of these failures and asked why. In 15, the relevant knowledge was available,
+        and the agent set it aside and followed its own reasoning (the paper calls this uninformed autonomy); in 5, the retrieved knowledge was
+        too sparse to steer the repair. How and when knowledge reaches the agent matters as much as recovering it.</p></div>
+    </div>
+    <div class="two reveal">
+      <div class="box"><span class="tag dim">Upper bound · oracle selector, not a system result</span><div class="bign">79.2%</div>
+        <p>If three patches were sampled after Lingxi's analysis and an oracle always picked a passing one when it exists, 396 of 500 would
+          pass. Lingxi has no such selector; the number marks the headroom for better patch selection.</p></div>
+      <div class="box"><span class="tag dim">Next steps</span>
+        <ul class="plain"><li>Extend knowledge guidance from analysis into patch generation.</li><li>Balance agent autonomy with knowledge guidance.</li>
+          <li>Validate beyond Python: the knowledge is procedure rather than syntax, but SWE-bench Verified covers Python only.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 05 PRACTICE -->
+  <section class="wrap section" id="practice">
+    <div class="shead reveal">
+      <div><div class="kicker">05 · Discussion</div>
+      <h2>From paper to practice: <em>what code never records</em>.</h2></div>
+      <div class="prose"><div class="claim"><span class="tag">From the paper</span>Procedural knowledge, how issues are diagnosed and fixed and why,
+        adds what the current code cannot show.</div>
+        <p style="margin-top:14px">It complements tools you may already use. Take one question, from astropy issue #14182: an RST table is written
+        with a single header row, and the request is to let the writer add further header rows, such as units. On a time axis, three kinds of
+        tool give three kinds of answer.</p></div>
+    </div>
+    <div class="taxis reveal">
+      <div class="tcol hot"><span class="tlab">PAST</span><span class="tick"></span>
+        <div class="tcard"><b>Lingxi</b><span>Procedures and rationales from historical fixes</span>
+          <div class="ex"><span class="exh">From #386 · feature &amp; functionality</span><ol><li>Supports reading/writing fixed-width formatted data</li><li>Handles configurable header structures</li><li>Supports various header configurations through <code>header_rows</code></li></ol></div></div></div>
+      <div class="tcol"><span class="tlab">PRESENT</span><span class="tick"></span>
+        <div class="tcard"><b>DeepWiki</b><span>Code-grounded documentation, architecture and Q&amp;A</span>
+          <div class="ex"><span class="exh">io.ascii · RST page <i>illustrative</i></span><ul><li>RST format in <code>io/ascii/rst.py</code></li><li>Built on the fixed-width classes</li><li>Header and data classes per format</li></ul></div></div></div>
+      <div class="tcol"><span class="tlab">INTENDED CHANGE</span><span class="tick"></span>
+        <div class="tcard"><b>OpenSpec</b><span>Proposal, requirements, design and implementation tasks</span>
+          <div class="ex"><span class="exh">Proposal · RST header rows <i>illustrative</i></span><ul><li><b>Why</b> units in RST output</li><li><b>What</b> accept <code>header_rows</code></li><li><b>Tasks</b> ☐ argument ☐ write rows ☐ test</li></ul></div></div></div>
+    </div>
+    <p class="note reveal">Same astropy question, three kinds of answer: complementary perspectives, not exclusive capabilities. The DeepWiki and
+      OpenSpec entries are illustrative; the Lingxi entry is quoted from the transferable knowledge of astropy #386.</p>
+    <div class="box hot tpa reveal">
+      <div class="tpa-h"><span class="tag hot">Related plugin · Lingxi Advisor</span><h3>Procedural knowledge for your coding agent</h3>
+        <p>Lingxi builds its knowledge offline, which is not convenient day to day. <a href="https://github.com/spine-se-lab/Lingxi-advisor" target="_blank" rel="noopener">Lingxi Advisor</a>
+          is a separate plugin built on the same idea: it brings procedural knowledge into everyday coding agents. Works with
+          <a href="https://github.com/openJiuwen-ai/iCode" target="_blank" rel="noopener">iCode</a> and OpenCode.</p></div>
+      <div class="mode"><b>Runtime<span>use it</span></b><p>When the agent is unsure, it searches the procedural knowledge prepared for this
+        repository and applies it, with sources.</p></div>
+      <div class="mode"><b>Prepare<span>mine it</span></b><p>Derives procedural knowledge from a past issue and its patch, one at a time or in
+        batches.</p></div>
+    </div>
+    <p class="disc reveal"><b>Disclaimer.</b> Lingxi Advisor is a related plugin, not a reproduction of this paper: it shares the paper's core idea,
+      procedural knowledge for coding agents, but its pipeline is its own and it is <b>not the system evaluated in the paper</b>. All numbers on
+      this page come from the research implementation, and the Distinguished Paper recognition applies to the paper. Installation and supported
+      platforms are in the <a href="https://github.com/spine-se-lab/Lingxi-advisor" target="_blank" rel="noopener">plugin README</a>.</p>
+  </section>
+
+  <!-- ===================================================================== 06 CITE -->
+  <section class="wrap section" id="cite">
+    <div class="shead reveal">
+      <div><div class="kicker">06 · Cite</div>
+      <h2>Cite this work.</h2></div>
+      <div class="prose"><p>Lingxi appears at ISSTA 2026 (Distinguished Paper). If you use it, please cite:</p></div>
+    </div>
+    <div class="bib reveal">
+      <button class="copy-btn" type="button" onclick="copyBibtex(this)" aria-label="Copy BibTeX">Copy</button><span id="copy-status" class="sr-only" role="status" aria-live="polite"></span>
+      <pre><code>@inproceedings{yang2026lingxi,
+  title     = {Lingxi: Repository-Level Issue Resolution Framework
+               Enhanced by Procedural Knowledge Guided Scaling},
+  author    = {Yang, Xu and Zhou, Jiayuan and Pacheco, Michael and
+               Zhu, Wenhan and He, Pengfei and Wang, Shaowei and
+               Liu, Kui and Pan, Ruiqi},
+  booktitle = {Proceedings of the ACM SIGSOFT International Symposium
+               on Software Testing and Analysis (ISSTA)},
+  year      = {2026},
+  note      = {Distinguished Paper Award. Preprint: arXiv:2510.11838}
+}</code></pre>
+    </div>
+  </section>
+  </main>
+
+  <footer class="wrap footer">
+    <div><b>Lingxi <span class="han" lang="zh-Hans">灵犀</span></b> · Xu Yang, Jiayuan Zhou, Michael Pacheco, Wenhan Zhu, Pengfei He, Shaowei Wang,
+      Kui Liu, Ruiqi Pan · University of Manitoba and Huawei.
+      <div class="links"><a href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">arXiv:2510.11838</a>
+        <a href="https://conf.researchr.org/details/issta-2026/issta-2026-research-papers/179/Lingxi-Repository-Level-Issue-Resolution-Framework-Enhanced-by-Procedural-Knowledge-" target="_blank" rel="noopener">ISSTA 2026</a>
+        <a href="#cite">BibTeX</a></div></div>
+    <div>The name <span class="han" lang="zh-Hans">灵犀</span> (líng xī) comes from a Chinese saying about a single thread that connects two minds.
+      Here it connects how past problems were solved to a new issue.<br><br>Contact: Jiayuan Zhou · <a href="mailto:jiayuan.zjy@gmail.com">jiayuan.zjy@gmail.com</a></div>
+  </footer>
+
+  <script>
+    (function () {
+      const navbar = document.getElementById("navbar");
+      const onScroll = () => navbar.classList.toggle("scrolled", window.scrollY > 30);
+      onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+      const nodes = Array.from(document.querySelectorAll(".reveal"));
+      if ("IntersectionObserver" in window) {
+        const obs = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } }), { threshold: 0, rootMargin: "0px 0px -6% 0px" });
+        nodes.forEach(n => obs.observe(n));
+      } else nodes.forEach(n => n.classList.add("visible"));
+      const links = Array.from(document.querySelectorAll(".rail ol a[href^='#']"));
+      const targets = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+      const mark = () => {
+        let cur = null; const y = window.scrollY + window.innerHeight * 0.3;
+        targets.forEach(el => { if (el.getBoundingClientRect().top + window.scrollY <= y) cur = el.id; });
+        links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + cur));
+      };
+      mark(); window.addEventListener("scroll", mark, { passive: true });
+      /* language switch keeps the current section */
+      document.querySelectorAll(".lang a").forEach(a => a.addEventListener("click", () => { a.href = a.getAttribute("href").split("#")[0] + location.hash; }));
+      /* Phase 3 connectors: drawn from the measured box centres, so rows can size to their content */
+      const p3 = document.querySelector(".p3");
+      const wire = () => {
+        if (!p3) return; const svg = p3.querySelector(".wire");
+        if (getComputedStyle(svg).display === "none") return;
+        const r = svg.getBoundingClientRect(); if (!r.width) return;
+        const mid = s => { const b = p3.querySelector(s).getBoundingClientRect(); return b.top + b.height / 2 - r.top; };
+        const w = r.width, y1 = mid(".in1"), y2 = mid(".in2"), yp = mid(".plan"), yf = mid(".fix"), c = w / 2;
+        const path = (a, b, col) => `<path d="M0,${a} C${c},${a} ${c},${b} ${w},${b}" fill="none" stroke="${col}" stroke-width="2"/><circle cx="${w}" cy="${b}" r="4" fill="${col}"/>`;
+        svg.setAttribute("viewBox", `0 0 ${w} ${r.height}`);
+        svg.innerHTML = path(y1, yp, "#e2502a") + path(y2, yp, "#2f8f6c") + path(y2, yf, "#2f8f6c");
+      };
+      wire(); window.addEventListener("resize", wire);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(wire);
+    })();
+    function copyBibtex(btn) {
+      const code = btn.closest(".bib").querySelector("code").textContent;
+      const status = document.getElementById("copy-status");
+      const flash = (ok) => { btn.textContent = ok ? "Copied" : "Copy failed"; btn.classList.toggle("copied", ok);
+        status.textContent = ok ? "BibTeX copied to the clipboard." : "Copy failed. Select the text and copy it manually.";
+        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); status.textContent = ""; }, 2000); };
+      const fallback = () => { const ta = document.createElement("textarea"); ta.value = code; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+        document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); flash(ok); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => flash(true)).catch(fallback); else fallback();
+    }
+  </script>
+</body>
+</html>

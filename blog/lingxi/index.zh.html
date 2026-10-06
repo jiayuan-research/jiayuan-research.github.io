@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <script>document.documentElement.classList.add('js')</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>灵犀 Lingxi · 用过程性知识解决仓库级 issue · ISSTA 2026</title>
+  <meta name="description" content="灵犀（Lingxi）从仓库自身的历史中恢复过程性知识，即一类 issue 如何诊断、如何修复以及为什么，并用它引导 coding agent 的分析、规划与修复。SWE-bench Verified 上 Pass@1 为 74.6%。ISSTA 2026 杰出论文。">
+  <meta property="og:title" content="Lingxi: Repository-Level Issue Resolution Framework Enhanced by Procedural Knowledge Guided Scaling">
+  <meta property="og:description" content="知识在前，探索在后。ISSTA 2026 杰出论文。">
+  <meta property="og:type" content="article">
+  <link rel="alternate" hreflang="en" href="index.html">
+  <link rel="alternate" hreflang="zh-Hans" href="index.zh.html">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='3' fill='%23e2502a'/%3E%3Cpath d='M5 12.5h14M12 5.5v14' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
+  <style>
+    /* =====================================================================
+       Light port of the rev9 talk deck ("Lingxi Thread"): square boxes with
+       corner ticks, mono uppercase tags, Bricolage Grotesque, cinnabar thread.
+       cinnabar = Lingxi · jade = knowledge / success · ash = baselines
+       orange = step 1 (issue-specific) · pink = step 2 / retrieved knowledge
+       ===================================================================== */
+    :root {
+      --paper: #f7f6f2; --white: #ffffff;
+      --ink: #161c1a; --ink-2: #2b332f; --dim: #555d59; --faint: #8a918d;
+      --line: rgba(22,28,26,.14); --line-2: rgba(22,28,26,.24); --tickc: rgba(22,28,26,.5);
+      --cin: #e2502a; --cin-ink: #b93c1b; --cin-soft: rgba(226,80,42,.08);
+      --jade: #2f8f6c; --jade-ink: #1f6b4f; --jade-soft: rgba(47,143,108,.08);
+      --ash: #b3b8b5; --ash-ink: #6b736f;
+      --orange: #e0a46c; --orange-ink: #9a5414; --orange-soft: rgba(242,185,138,.14);
+      --pink: #e39d99; --pink-ink: #ad3f3a; --pink-soft: rgba(239,163,160,.13);
+      --sand-ink: #7f5d24;
+      --display: "Bricolage Grotesque", "Inter", -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --han: "Noto Serif SC", "Songti SC", serif;
+      --nav-h: 64px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: radial-gradient(900px 560px at 12% -6%, rgba(226,80,42,.07), transparent 62%), radial-gradient(900px 600px at 96% 6%, rgba(47,143,108,.06), transparent 64%), var(--paper);
+      font-family: var(--display); font-size: 16px; line-height: 1.6; font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+    a { color: var(--cin-ink); }
+    code { font-family: var(--mono); font-size: .86em; color: var(--sand-ink); }
+    b, strong { font-weight: 600; color: var(--ink); }
+    .han { font-family: var(--han); }
+    :is(a, button):focus-visible { outline: 2px solid var(--cin); outline-offset: 3px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .skip { position: absolute; left: -999px; top: 8px; z-index: 200; background: var(--ink); color: #fff; padding: 8px 12px; font-family: var(--mono); font-size: .8rem; }
+    .skip:focus { left: 16px; }
+    .js .reveal { opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+    .js .reveal.visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .js .reveal { opacity: 1; transform: none; transition: none; } }
+    @media print { .js .reveal { opacity: 1 !important; transform: none !important; } .topbar { position: static !important; } .hero { padding-top: 20px !important; } .skip, .copy-btn, .hint { display: none !important; } }
+
+    /* ---------- shared primitives (deck: .kicker .tag .box .claim) ---------- */
+    .kicker { display: flex; align-items: center; gap: 10px; font: 500 .74rem/1.2 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--cin-ink); }
+    .kicker::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--cin); flex: none; }
+    .tag { display: block; font: 500 .7rem/1.3 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--jade-ink); }
+    .tag.hot { color: var(--cin-ink); } .tag.dim { color: var(--dim); } .tag.ash { color: var(--ash-ink); }
+    .tag.orange { color: var(--orange-ink); } .tag.pink { color: var(--pink-ink); }
+    .refchip { display: inline-block; margin-left: 10px; padding: 2px 8px; border: 1px solid var(--line-2); border-radius: 999px; font: 500 .66rem/1.3 var(--mono); letter-spacing: .04em; text-transform: none; color: var(--dim); vertical-align: 1px; }
+    .box { position: relative; border: 1px solid var(--line); background: rgba(255,255,255,.72); padding: 22px 24px; min-width: 0; }
+    .box::before, .box::after { content: ""; position: absolute; width: 11px; height: 11px; border: 0 solid var(--tickc); }
+    .box::before { left: -1px; top: -1px; border-width: 2px 0 0 2px; }
+    .box::after { right: -1px; bottom: -1px; border-width: 0 2px 2px 0; }
+    .box.hot { border-color: rgba(226,80,42,.45); background: linear-gradient(160deg, rgba(226,80,42,.07), rgba(226,80,42,.015)); }
+    .box.hot::before, .box.hot::after { border-color: var(--cin); }
+    .box.jade { border-color: rgba(47,143,108,.4); } .box.jade::before, .box.jade::after { border-color: var(--jade); }
+    .box.ash { background: rgba(255,255,255,.5); }
+    .box.orange { border-color: rgba(224,164,108,.6); background: linear-gradient(160deg, rgba(242,185,138,.13), rgba(242,185,138,.03)); }
+    .box.orange::before, .box.orange::after { border-color: var(--orange); }
+    .box.pink { border-color: rgba(227,157,153,.6); background: linear-gradient(160deg, rgba(239,163,160,.13), rgba(239,163,160,.03)); }
+    .box.pink::before, .box.pink::after { border-color: var(--pink); }
+    .box h3, .box h4 { margin: 8px 0 0; font: 700 1.18rem/1.25 var(--display); letter-spacing: -.015em; color: var(--ink); }
+    .box p { margin: 8px 0 0; color: var(--dim); font-size: .94rem; }
+    ul.plain { list-style: none; margin: 10px 0 0; padding: 0; }
+    ul.plain li { position: relative; padding-left: 18px; margin-top: 6px; color: var(--dim); }
+    ul.plain li::before { content: ""; position: absolute; left: 0; top: .62em; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--jade); }
+    .box.hot ul.plain li::before { background: var(--cin); border-color: var(--cin); }
+    .redline { margin-top: 12px !important; font: 500 .82rem/1.45 var(--mono) !important; color: var(--cin-ink) !important; }
+    .claim { border-left: 3px solid var(--cin); background: var(--cin-soft); padding: 14px 20px; font-size: 1.08rem; line-height: 1.5; color: var(--ink); }
+    .claim .tag { margin-bottom: 4px; color: var(--cin-ink); }
+    .art { display: block; width: 100%; height: auto; }
+
+    /* ---------- topbar ---------- */
+    .topbar { position: fixed; z-index: 100; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 14px 40px;
+      background: rgba(247,246,242,.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid transparent; font: 400 .74rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; transition: background .3s, border-color .3s; }
+    .topbar.scrolled { background: rgba(247,246,242,.92); border-bottom-color: var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; white-space: nowrap; }
+    .brand b { font-weight: 600; } .brand .h { font: 900 1.15rem/1 var(--han); color: var(--cin); letter-spacing: 0; }
+    .brand .sub { color: var(--dim); }
+    .nav { display: flex; gap: 22px; align-items: center; }
+    .nav a { color: var(--dim); text-decoration: none; } .nav a:hover { color: var(--cin-ink); }
+    .nav a.out { color: var(--ink); border: 1px solid var(--line-2); padding: 6px 10px; }
+    @media (max-width: 960px) { .topbar { padding: 12px 20px; } .nav { gap: 14px; } }
+    @media (max-width: 760px) { .nav .opt { display: none; } }
+    @media (max-width: 400px) { .brand .sub { display: none; } }
+
+    /* ---------- layout ---------- */
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 40px; }
+    @media (max-width: 960px) { .wrap { padding: 0 20px; } }
+    .section { padding-top: 72px; padding-bottom: 24px; scroll-margin-top: var(--nav-h); }
+    @media (max-width: 960px) { .section { padding-top: 52px; padding-bottom: 16px; } }
+    .section h2 { margin: 14px 0 18px; font: 700 clamp(1.65rem, 3.2vw, 2.35rem)/1.1 var(--display); letter-spacing: -.03em; }
+    .section h2 em, h3 em { font-style: normal; color: var(--cin); }
+    .prose { max-width: 47em; }
+    .prose p { margin: 0 0 14px; font-size: 1.03rem; color: var(--ink-2); }
+    .prose p.lede { font-size: 1.12rem; color: var(--ink); }
+    .block { margin-top: 26px; }
+    .block-h { margin: 46px 0 14px; }
+    .block-h h3 { margin: 10px 0 0; font: 700 clamp(1.25rem, 2.3vw, 1.6rem)/1.2 var(--display); letter-spacing: -.02em; }
+    .cap { margin: 12px 0 0; font-size: .92rem; color: var(--dim); max-width: 52em; }
+    .note { margin: 12px 0 0; font: 400 .74rem/1.65 var(--mono); color: var(--faint); }
+    .read { margin-top: 18px; max-width: 49em; }
+    .read p { margin: 0 0 10px; color: var(--ink-2); }
+    .read p .tag { display: inline; margin-right: 8px; color: var(--cin-ink); }
+    .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .hint { display: none; margin-top: 8px; text-align: center; font: 400 .68rem var(--mono); color: var(--faint); }
+    @media (max-width: 760px) { .hint { display: block; } }
+
+    /* ---------- hero ---------- */
+    .hero { padding-top: 132px; padding-bottom: 36px; }
+    .hero-grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 48px; align-items: start; }
+    .hero-grid > * { min-width: 0; }
+    @media (max-width: 960px) { .hero { padding-top: 100px; } .hero-grid { grid-template-columns: 1fr; gap: 28px; } }
+    .award { color: var(--sand-ink); } .award::before { background: #c79a4c; }
+    .hero h1 { margin: 18px 0 18px; font: 800 clamp(2.8rem, 6.4vw, 4.6rem)/1 var(--display); letter-spacing: -.045em; }
+    .hero h1 .han { margin-left: .22em; font-size: .62em; font-weight: 700; color: var(--cin); letter-spacing: 0; }
+    .ptitle { margin: 0 0 16px; font: 600 clamp(1.1rem, 2vw, 1.38rem)/1.3 var(--display); color: var(--ink-2); letter-spacing: -.01em; max-width: 28em; }
+    .hsub { margin: 0 0 20px; font-size: 1.04rem; color: var(--ink-2); max-width: 40em; }
+    .authors { margin: 0 0 4px; font-size: .95rem; }
+    .authors sup, .affils sup { font: 500 .65em var(--mono); color: var(--cin-ink); }
+    .affils { margin: 0 0 22px; font: 400 .76rem/1.8 var(--mono); color: var(--dim); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border: 1px solid var(--line-2); background: #fff; color: var(--ink); text-decoration: none; font: 500 .74rem/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; border-radius: 2px; }
+    .btn:hover { border-color: var(--cin); color: var(--cin-ink); }
+    .btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; } .btn.primary:hover { background: #000; color: #fff; }
+    .hnote { margin: 10px 0 0; font: 400 .72rem var(--mono); color: var(--faint); }
+    .ledger .big { display: flex; align-items: baseline; gap: 6px; margin: 10px 0 2px; }
+    .ledger .big b { font: 800 4rem/1 var(--display); letter-spacing: -.04em; color: var(--cin); }
+    .ledger .big span { font: 500 .9rem var(--mono); color: var(--dim); }
+    .ledger p { margin: 4px 0 14px; font-size: .92rem; }
+    .ledger dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); }
+    .ledger dl div { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+    .ledger dl div:nth-child(odd) { border-right: 1px solid var(--line); }
+    .ledger dl div:nth-child(even) { padding-left: 12px; }
+    .ledger dt { font-size: .76rem; line-height: 1.35; color: var(--dim); }
+    .ledger dd { margin: 4px 0 0; font: 600 .95rem/1.3 var(--mono); color: var(--ink); }
+    .ledger dd.j { color: var(--jade-ink); }
+    @media (max-width: 400px) { .ledger dl { grid-template-columns: 1fr; } .ledger dl div:nth-child(odd) { border-right: 0; } .ledger dl div:nth-child(even) { padding-left: 0; } }
+    .takehome { margin-top: 30px; }
+
+    /* ---------- motivation ---------- */
+    .dev { display: grid; grid-template-columns: 1.45fr 1fr; gap: 26px; align-items: center; margin-top: 14px; }
+    .dev > * { min-width: 0; }
+    @media (max-width: 860px) { .dev { grid-template-columns: 1fr; } }
+    .pk { border: 1px solid rgba(47,143,108,.45); background: var(--jade-soft); padding: 14px 18px; }
+    .pk .q { margin: 4px 0 8px; font-weight: 700; color: var(--jade-ink); }
+    .pk ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+    .pk li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; color: var(--ink-2); }
+    .pk li span { width: 19px; height: 19px; margin-top: 3px; border-radius: 50%; background: var(--cin); color: #fff; font: 700 .66rem/19px var(--mono); text-align: center; }
+    .pk .why { margin-top: 8px; font-size: .92rem; color: var(--dim); }
+    .pk .why i { font: 500 .66rem var(--mono); letter-spacing: .12em; font-style: normal; color: var(--ink-2); margin-right: 8px; }
+    .ingr { display: grid; grid-template-columns: 40px minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 6px 28px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .ingr:first-of-type { margin-top: 6px; }
+    .inum { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--dim); display: grid; place-items: center; font: 700 .82rem var(--mono); }
+    .ingr b { display: block; font-size: 1.12rem; }
+    .ingr p { margin: 2px 0 0; color: var(--dim); }
+    .ingr .cd { position: relative; border: 1px solid var(--line-2); border-radius: 4px; padding: 12px 10px 6px; }
+    .ingr .cd > span { position: absolute; left: 10px; top: -8px; padding: 0 6px; background: #fbfaf8; font: 500 .62rem/1.2 var(--mono); letter-spacing: .08em; color: var(--dim); }
+    .ingr > :last-child { width: 100%; max-width: 340px; justify-self: center; }
+    @media (max-width: 680px) { .ingr { grid-template-columns: 36px minmax(0, 1fr); } .ingr > :last-child { grid-column: 2; max-width: 320px; } }
+    .ingr-plus { margin: 14px 0 0; font-size: 1.04rem; color: var(--ink-2); }
+    .limits { display: grid; gap: 18px; margin-top: 8px; }
+    .limit p.prior { font-size: .86rem; color: var(--faint); }
+
+    /* ---------- method ---------- */
+    .figure { margin: 18px 0 0; padding: 18px; }
+    .figure img { display: block; width: 100%; min-width: 640px; height: auto; }
+    .phase { margin-top: 54px; }
+    .phase h3.ph { margin: 10px 0 12px; font: 700 clamp(1.35rem, 2.6vw, 1.85rem)/1.15 var(--display); letter-spacing: -.025em; }
+    .lift { color: var(--cin-ink); background: var(--cin-soft); padding: 0 4px; border-radius: 2px; }
+    .flow2 { display: block; width: 100%; min-width: 760px; height: auto; }
+    .flow2 .t { font: 500 16px var(--mono); letter-spacing: .14em; }
+    .flow2 .h { font: 700 32px var(--display); letter-spacing: -.02em; }
+    .flow2 .h2 { font: 600 23px var(--display); }
+    .flow2 .h3 { font: 600 22px var(--display); }
+    .flow2 .p { font: 400 22px var(--display); }
+    .flow2 .m { font: 500 17px var(--mono); }
+    .p3 { display: grid; grid-template-columns: minmax(0, 1.25fr) 64px minmax(0, 1.75fr); grid-template-rows: auto auto; row-gap: 22px; margin-top: 18px; }
+    .p3 .in1 { grid-column: 1; grid-row: 1; } .p3 .in2 { grid-column: 1; grid-row: 2; }
+    .p3 .plan { grid-column: 3; grid-row: 1; } .p3 .fix { grid-column: 3; grid-row: 2; }
+    .p3 .wire { grid-column: 2; grid-row: 1 / 3; width: 100%; height: 100%; overflow: visible; display: block; }
+    .p3 .plan::after { box-shadow: none; }
+    .p3 .vlink { position: absolute; left: 50%; bottom: -27px; height: 26px; border-left: 2px solid var(--cin); }
+    .p3 .vlink::after { content: ""; position: absolute; left: -5px; bottom: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--cin); }
+    .p3 .big3 { color: var(--ink); margin: 8px 0 0; font: 700 1.18rem/1.25 var(--display); letter-spacing: -.015em; }
+    @media (max-width: 860px) { .p3 { grid-template-columns: 1fr; grid-template-rows: none; row-gap: 14px; } .p3 > * { grid-column: 1 !important; grid-row: auto !important; } .p3 .wire, .p3 .vlink { display: none; } }
+
+    /* ---------- results ---------- */
+    .when { display: inline-block; margin-top: 4px; padding: 5px 10px; border: 1px solid rgba(184,137,63,.6); background: rgba(233,213,138,.14); font: 500 .7rem/1.3 var(--mono); color: var(--sand-ink); }
+    .chart { padding: 18px 16px 10px; margin-top: 4px; }
+    .chart svg.rq1 { display: block; width: 100%; min-width: 640px; height: auto; }
+    svg.rq1 .ax { font: 400 11px var(--mono); fill: var(--faint); }
+    svg.rq1 .val { font: 500 13px var(--mono); fill: var(--dim); }
+    svg.rq1 .val.ours { fill: var(--cin-ink); font-weight: 700; }
+    svg.rq1 .nm { font: 400 12.5px var(--display); fill: var(--dim); }
+    svg.rq1 .nm.ours { fill: var(--cin-ink); font-weight: 700; }
+    svg.rq1 .gn { font: 700 15px var(--display); fill: var(--ink); }
+    svg.rq1 .gg { font: 500 12.5px var(--mono); fill: var(--cin-ink); }
+    svg.rq1 .thread { font: 500 13px var(--mono); fill: var(--cin-ink); }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 6px 4px; font: 400 .7rem var(--mono); color: var(--dim); }
+    .legend i { display: inline-block; width: 11px; height: 11px; margin-right: 6px; vertical-align: -1px; }
+    .lollipop { padding: 4px 0; }
+    .lp-row { display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 20px; align-items: center; min-height: 46px; border-bottom: 1px solid rgba(22,28,26,.05); }
+    .lp-lab { font-size: .98rem; color: var(--dim); }
+    .lp-lab b { color: var(--ink); } .lp-lab b.lx { color: var(--cin-ink); }
+    .lp-track { position: relative; height: 22px; margin-right: 64px; }
+    .lp-stem { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 2px; background: rgba(140,145,142,.7); }
+    .lp-dot { position: absolute; top: 2px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--ash-ink); }
+    .lp-val { position: absolute; top: 1px; margin-left: 16px; font: 500 .92rem var(--mono); color: var(--dim); white-space: nowrap; }
+    .lp-row.jade .lp-stem, .lp-row.jade .lp-dot { background: var(--jade); }
+    .lp-row.ink .lp-stem, .lp-row.ink .lp-dot { background: var(--ink-2); }
+    .lp-row.ours .lp-stem, .lp-row.ours .lp-dot { background: var(--cin); }
+    .lp-row.ours .lp-val { color: var(--cin-ink); font-weight: 700; }
+    .lp-row.axis { border: 0; min-height: 0; }
+    .lp-axis { position: relative; height: 40px; margin-right: 64px; border-top: 1px solid var(--line-2); font: 400 .72rem var(--mono); color: var(--dim); }
+    .lp-axis span { position: absolute; top: 8px; transform: translateX(-50%); }
+    .lp-axis em { position: absolute; right: -64px; top: 24px; font-style: normal; font-size: .64rem; letter-spacing: .08em; }
+    @media (max-width: 700px) { .lp-row { grid-template-columns: 1fr; gap: 4px; padding: 8px 0; } .lp-row.axis .lp-lab { display: none; } }
+    .callouts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    @media (max-width: 760px) { .callouts { grid-template-columns: 1fr; } }
+    .callout { display: flex; align-items: center; gap: 18px; padding: 16px 20px; }
+    .callout .bign { font: 800 2.3rem/1 var(--display); letter-spacing: -.035em; color: var(--cin); white-space: nowrap; }
+    .callout .txt { font-size: .96rem; color: var(--dim); line-height: 1.4; }
+    .callout .txt b { display: block; }
+    table.heat { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+    .heat th, .heat td { padding: 0 6px; font-weight: 400; }
+    .heat thead th { text-align: center; font: 700 1.05rem/1.1 var(--display); padding-bottom: 4px; }
+    .heat thead th span { display: block; margin-top: 4px; font: 400 .6rem var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+    .heat thead th.tot { text-align: left; color: var(--dim); }
+    .heat tbody th { text-align: right; padding-right: 14px; color: var(--dim); font-size: .98rem; width: 32%; }
+    .heat td.c { width: 15%; }
+    .heat td.c span { display: flex; align-items: center; justify-content: center; height: 36px; border: 1px solid var(--line); border-radius: 3px; font: 500 .95rem var(--mono); }
+    .heat td.c span.z { color: rgba(22,28,26,.25); }
+    .heat td.tot { padding-left: 16px; white-space: nowrap; }
+    .heat .tb { display: inline-block; width: calc(100% - 36px); height: 9px; vertical-align: middle; }
+    .heat .tb i { display: block; height: 100%; border-radius: 2px; background: rgba(22,28,26,.22); }
+    .heat td.tot b { margin-left: 8px; font: 500 .95rem var(--mono); color: var(--dim); }
+    .heat tr.top > * { border-top: 2px solid var(--cin); border-bottom: 2px solid var(--cin); padding-top: 4px; padding-bottom: 4px; }
+    .heat tr.top > :first-child { border-left: 2px solid var(--cin); border-radius: 6px 0 0 6px; color: var(--ink); font-weight: 700; }
+    .heat tr.top > :last-child { border-right: 2px solid var(--cin); border-radius: 0 6px 6px 0; }
+    .heat tr.top .tb i { background: var(--cin); } .heat tr.top td.tot b { color: var(--cin-ink); font-weight: 700; }
+    @media (max-width: 640px) {
+      .heat-box { padding: 14px 10px; }
+      table.heat { table-layout: fixed; }
+      .heat thead th { font-size: .8rem; } .heat thead th span { display: none; }
+      .heat tbody th { text-align: left; font-size: .8rem; line-height: 1.25; padding-right: 6px; width: 34%; }
+      .heat th, .heat td { padding: 0 2px; } .heat td.c span { height: 30px; font-size: .82rem; }
+      .heat .tb { display: none; } .heat td.tot { padding-left: 6px; } .heat td.tot b { margin: 0; }
+    }
+    .dprow { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr); align-items: center; gap: 0 6px; margin-top: 10px; }
+    .dprow .pr { padding: 10px 14px; border: 1px solid rgba(47,143,108,.45); background: var(--jade-soft); border-radius: 3px; font-weight: 600; }
+    .dprow .pr span { display: block; font: 400 .66rem var(--mono); color: var(--dim); letter-spacing: .04em; }
+    .dprow .ar { text-align: center; font-family: var(--mono); color: var(--jade-ink); }
+    .dprow .ac { color: var(--ink-2); }
+    .dprow.no .pr { border-color: var(--line-2); background: rgba(22,28,26,.03); color: var(--dim); }
+    .dprow.no .ar { color: var(--ash-ink); }
+    @media (max-width: 640px) { .dprow { grid-template-columns: 1fr; } .dprow .ar { text-align: left; } }
+    .takebox { margin-top: 16px; padding: 14px 20px; border-left: 3px solid var(--cin); background: var(--cin-soft); font: 500 clamp(1.08rem, 2vw, 1.3rem)/1.4 var(--display); }
+    .takebox b { color: var(--cin-ink); }
+
+    /* ---------- outlook ---------- */
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+    @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+    .two .bign { margin-top: 6px; font: 800 2.2rem/1 var(--display); letter-spacing: -.035em; color: var(--ink); }
+
+    /* ---------- in practice (slide 12) ---------- */
+    .taxis { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    .taxis::before { content: ""; position: absolute; left: 2%; right: 1%; top: 33px; height: 2px; background: var(--line-2); }
+    .taxis::after { content: ""; position: absolute; right: 0; top: 27px; border: 7px solid transparent; border-left: 11px solid var(--line-2); }
+    .tcol { position: relative; min-width: 0; }
+    .tlab { display: block; text-align: center; font: 500 .7rem/1 var(--mono); letter-spacing: .2em; color: var(--dim); }
+    .tick { display: block; width: 16px; height: 16px; margin: 9px auto 14px; border-radius: 50%; background: var(--paper); border: 2px solid var(--dim); position: relative; z-index: 1; }
+    .tcol.hot .tlab { color: var(--cin-ink); } .tcol.hot .tick { background: var(--cin); border-color: var(--cin); }
+    .tcard { border: 1px solid var(--line); background: rgba(255,255,255,.7); padding: 14px 18px; border-radius: 2px; height: calc(100% - 50px); display: flex; flex-direction: column; }
+    .tcard > b { display: block; font-size: 1.2rem; } .tcol.hot .tcard > b { color: var(--cin-ink); }
+    .tcard > span { display: block; margin-top: 4px; color: var(--dim); font-size: .95rem; }
+    @media (max-width: 720px) { .taxis { grid-template-columns: 1fr; gap: 10px; } .taxis::before, .taxis::after, .tick { display: none; } .tlab { text-align: left; margin-bottom: 6px; } .tcard { height: auto; } }
+    .tpa { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; padding: 24px; align-items: stretch; }
+    .tpa-h { grid-column: 1 / -1; } .tpa-h p { max-width: none; }
+    @media (max-width: 760px) { .tpa { grid-template-columns: 1fr; } }
+    .tpa h3 { font-size: 1.3rem; }
+    .tpa .meta { margin-top: 10px; font-size: .9rem; color: var(--dim); }
+    .mode { border: 1px solid rgba(226,80,42,.35); border-radius: 3px; background: rgba(255,255,255,.75); padding: 16px 18px; }
+    .mode b { display: block; font-size: 1.15rem; }
+    .mode b span { margin-left: 8px; font: 500 .64rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--cin-ink); }
+    .mode p { margin: 8px 0 0; color: var(--dim); font-size: .95rem; }
+    .disc { margin-top: 14px; font-size: .9rem; color: var(--dim); max-width: 60em; }
+    .disc b { color: var(--ink-2); }
+
+    /* ---------- cite & footer ---------- */
+    .bib { position: relative; margin-top: 16px; padding: 20px 22px; background: #11161a; color: #ddd8cc; border-radius: 2px; }
+    .bib pre { margin: 0; overflow-x: auto; } .bib code { font: 400 .8rem/1.7 var(--mono); color: #ddd8cc; white-space: pre; }
+    .copy-btn { position: absolute; top: 14px; right: 14px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; font: 500 .7rem var(--mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+    .copy-btn.copied { background: var(--jade); border-color: var(--jade); }
+    @media (max-width: 520px) { .copy-btn { position: static; margin-bottom: 10px; } .bib code { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .72rem; } }
+    .footer { margin-top: 56px; padding-top: 28px; padding-bottom: 56px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; font-size: .86rem; color: var(--dim); }
+    @media (max-width: 760px) { .footer { grid-template-columns: 1fr; } }
+    .footer a { color: var(--ink-2); }
+    .footer .links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font: 400 .72rem var(--mono); }
+
+    /* ---------- limitation boxes: text and visual side by side when there is room ---------- */
+    .limit-grid { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 32px; align-items: start; margin-top: 4px; }
+    .limit-grid p { font-size: .98rem; }
+    @media (max-width: 900px) { .limit-grid { grid-template-columns: 1fr; gap: 16px; } }
+    .docrow { display: grid; grid-template-columns: 88px minmax(0, 1fr) 88px; gap: 0 10px; align-items: start; margin-top: 6px; }
+    .doc { border: 1px solid var(--line-2); background: #fff; padding: 10px 12px 14px; min-height: 150px; }
+    .doc b { display: block; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid var(--line); font: 500 .64rem/1.25 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .doc i { display: block; height: 3px; margin-top: 12px; width: 92%; background: rgba(22,28,26,.18); }
+    .doc i.s { width: 60%; } .doc i.p { background: rgba(47,143,108,.7); width: 80%; } .doc i.m { background: rgba(226,80,42,.6); width: 70%; }
+    .mid { min-width: 0; }
+    .pairline { position: relative; margin: 26px 0 16px; border-top: 2px solid rgba(22,28,26,.45); }
+    .pairline::after { content: ""; position: absolute; right: -2px; top: -7px; border: 6px solid transparent; border-left: 10px solid rgba(22,28,26,.45); }
+    .pairline span { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); font: 500 .62rem/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+    .lost { padding: 12px 16px; border: 2px dashed rgba(226,80,42,.55); border-radius: 4px; background: rgba(226,80,42,.035); }
+    .lost .tag { color: var(--cin-ink); margin-bottom: 6px; }
+    .lost ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; color: var(--dim); }
+    .lost li b { display: inline; margin-right: 6px; }
+    .lost li b { color: var(--ink); }
+    @media (max-width: 600px) { .docrow { grid-template-columns: 1fr; gap: 8px; } .doc { min-height: 0; } .doc i { display: none; } .doc b { border: 0; margin: 0; padding: 0; } .pairline { display: none; } .lost ul { grid-template-columns: 1fr; } }
+
+    /* ---------- Phase 1 steps, stacked ---------- */
+    .step { margin-top: 18px; }
+    .step-h p { max-width: 50em; }
+    .acols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 36px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .acols > div { min-width: 0; }
+    @media (max-width: 760px) { .acols { grid-template-columns: 1fr; } }
+    .ahead { font-weight: 700; font-size: 1rem; white-space: nowrap; }
+    .ahead span { margin-left: 6px; font: 400 .62rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .awhy { margin: 1px 0 6px; font-style: italic; font-size: .88rem; color: var(--dim); }
+    .ag { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px dashed var(--line); }
+    .ag > b { font: 500 .62rem/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+    .orange .ag > b { color: var(--orange-ink); } .pink .ag > b { color: var(--pink-ink); }
+    .ag > div { display: flex; flex-wrap: wrap; gap: 5px; }
+    .ch { padding: 2px 8px; border: 1px solid var(--line-2); border-radius: 2px; background: rgba(255,255,255,.75); font-size: .86rem; color: var(--ink-2); }
+    .ch.lift { border-color: rgba(226,80,42,.5); background: var(--cin-soft); color: var(--cin-ink); }
+    .kq { margin: 16px 0 0; padding: 10px 14px; font-size: .94rem; color: var(--ink); line-height: 1.55; }
+    .kq .tag { color: var(--cin-ink); margin-bottom: 4px; }
+    .kq.s1 { background: var(--orange-soft); border-left: 3px solid var(--orange); }
+    .kq.s2 { background: var(--pink-soft); border-left: 3px solid var(--pink); }
+    .vjoin { position: relative; height: 40px; margin-left: 48px; border-left: 2px solid var(--cin); }
+    .vjoin::after { content: ""; position: absolute; left: -5px; bottom: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--cin); }
+    .vjoin span { position: absolute; left: 12px; top: 11px; font: 500 .64rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--cin-ink); }
+
+    /* ---------- left rail navigation (wide screens) ---------- */
+    .rail { display: none; }
+    @media (min-width: 1200px) {
+      body { padding-left: 224px; }
+      .topbar { display: none; }
+      .wrap { max-width: 1060px; }
+      .hero { padding-top: 64px; }
+      .rail { display: flex; flex-direction: column; position: fixed; z-index: 90; left: 0; top: 0; bottom: 0; width: 224px; padding: 30px 22px 24px 28px; border-right: 1px solid var(--line); background: rgba(247,246,242,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); overflow-y: auto; }
+      .rbrand { display: flex; gap: 10px; align-items: center; color: var(--ink); text-decoration: none; margin-bottom: 30px; }
+      .rbrand .h { font: 900 1.6rem/1 var(--han); color: var(--cin); }
+      .rbrand b { display: block; font-size: 1.05rem; } .rbrand small { display: block; font: 400 .64rem var(--mono); letter-spacing: .12em; color: var(--dim); }
+      .rail ol { list-style: none; margin: 0; padding: 0; }
+      .rail > ol > li { margin-bottom: 4px; }
+      .rail a { display: block; padding: 5px 0 5px 12px; border-left: 2px solid transparent; color: var(--dim); text-decoration: none; font-size: .9rem; line-height: 1.3; }
+      .rail > ol > li > a { font-weight: 600; color: var(--ink-2); }
+      .rail a i { font: 500 .66rem var(--mono); font-style: normal; color: var(--faint); margin-right: 8px; letter-spacing: .06em; }
+      .rail ol ol a { font-size: .8rem; padding: 3px 0 3px 30px; }
+      .rail a:hover { color: var(--cin-ink); }
+      .rail a.on { color: var(--cin-ink); border-left-color: var(--cin); }
+      .rail a.on i { color: var(--cin-ink); }
+      .rlinks { margin-top: auto; display: flex; gap: 10px; padding-top: 18px; }
+      .rlinks a { padding: 6px 10px; border: 1px solid var(--line-2); font: 500 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+    }
+
+    .figwrap { position: relative; min-width: 640px; }
+    .figwrap img { min-width: 0; }
+    .pbadge { position: absolute; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; background: var(--ink); color: #fff; text-decoration: none; font: 500 .66rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    .pbadge b { display: grid; place-items: center; width: 18px; height: 18px; background: var(--cin); color: #fff; font-weight: 700; }
+    .pbadge:hover { background: var(--cin-ink); }
+    .phase .kicker b { display: inline-grid; place-items: center; width: 18px; height: 18px; background: var(--cin); color: #fff; font-weight: 700; letter-spacing: 0; }
+    .phase .kicker.num::before { display: none; }
+
+    /* ---------- section openers: kicker, one-line heading, then text at full width ---------- */
+    .shead, .phead { display: block; }
+    .shead h2 { margin: 12px 0 14px; }
+    .phead h3.ph { margin: 10px 0 10px; }
+    .shead .prose, .phead .prose { max-width: none; }
+    .shead .prose p, .phead .prose p { font-size: 1.04rem; }
+    .shead .prose p.lede { font-size: 1.14rem; }
+    .shead .prose > :last-child, .phead .prose > :last-child { margin-bottom: 0; }
+    .shead + * { margin-top: 26px; }
+    .phead + * { margin-top: 20px; }
+    .read { max-width: none; }
+    .read .note { grid-column: 1 / -1; }
+    @media (max-width: 760px) { .read { grid-template-columns: 1fr; } }
+    .dev .cap { margin-top: 10px; font-size: .88rem; }
+    .kq-note { margin: 10px 0 0 !important; font-size: .9rem !important; }
+    .limit .prior { margin-top: 14px; }
+    .ex { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line-2); flex: 1; }
+    .exh { display: block; margin-bottom: 6px; font: 500 .62rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+    .tcol.hot .exh { color: var(--cin-ink); }
+    .exh i { font-style: normal; margin-left: 6px; padding: 1px 5px; border: 1px solid var(--line-2); text-transform: none; letter-spacing: .02em; }
+    .ex ol, .ex ul { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--ink-2); line-height: 1.45; }
+    .ex li + li { margin-top: 4px; }
+    .ex code { font-size: .82em; }
+    .ex li b { color: var(--ink); margin-right: 6px; }
+    .kq p { margin: 2px 0 4px; color: var(--ink); font-size: .94rem; }
+    .kq ol, .kq ul { margin: 0; padding-left: 20px; }
+    .kq li { margin-top: 2px; }
+    .kq2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+    @media (max-width: 640px) { .kq2 { grid-template-columns: 1fr; } }
+    .limits > .limit:first-child .limit-grid { align-items: center; }
+
+    /* ---------- language switch (EN / 中文) ---------- */
+    .lang { display: inline-flex; border: 1px solid var(--line-2); background: rgba(247,246,242,.92); font: 500 .7rem/1 var(--mono); letter-spacing: .08em; }
+    .lang a { padding: 6px 9px; color: var(--dim); text-decoration: none; border: 0 !important; }
+    .lang a + a { border-left: 1px solid var(--line-2) !important; }
+    .lang a[aria-current="page"] { background: var(--ink); color: #fff; }
+    .lang a:not([aria-current]):hover { color: var(--cin-ink); }
+    .lang.in-rail { display: none; }
+    @media (min-width: 1200px) { .lang.in-rail { display: inline-flex; align-self: flex-start; margin: -12px 0 26px; } }
+    @media (max-width: 420px) { .nav a[href="#results"] { display: none; } .nav { gap: 10px; } }
+    /* ---------- Chinese typography ---------- */
+    html[lang="zh-Hans"] body { font-family: var(--display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif; line-height: 1.75; }
+    html[lang="zh-Hans"] .tag, html[lang="zh-Hans"] .kicker, html[lang="zh-Hans"] .rail a i, html[lang="zh-Hans"] .ag > b,
+    html[lang="zh-Hans"] .tlab, html[lang="zh-Hans"] .exh, html[lang="zh-Hans"] .redline, html[lang="zh-Hans"] .note,
+    html[lang="zh-Hans"] .hnote, html[lang="zh-Hans"] .when, html[lang="zh-Hans"] .pairline span, html[lang="zh-Hans"] .vjoin span,
+    html[lang="zh-Hans"] .ledger dd, html[lang="zh-Hans"] .btn, html[lang="zh-Hans"] .topbar {
+      font-family: var(--mono), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", monospace; letter-spacing: .06em; }
+    html[lang="zh-Hans"] .section h2, html[lang="zh-Hans"] h3, html[lang="zh-Hans"] h4, html[lang="zh-Hans"] .hero h1 { letter-spacing: 0; }
+    html[lang="zh-Hans"] .prose p, html[lang="zh-Hans"] .read p { line-height: 1.8; }
+    html[lang="zh-Hans"] .flow2 text { font-family: var(--display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; }
+    html[lang="zh-Hans"] .doc b { letter-spacing: .02em; white-space: nowrap; }
+    html[lang="zh-Hans"] .tag, html[lang="zh-Hans"] .kicker, html[lang="zh-Hans"] .ag > b, html[lang="zh-Hans"] .tlab, html[lang="zh-Hans"] .exh,
+    html[lang="zh-Hans"] .doc b, html[lang="zh-Hans"] .pairline span, html[lang="zh-Hans"] .vjoin span, html[lang="zh-Hans"] .btn,
+    html[lang="zh-Hans"] .topbar, html[lang="zh-Hans"] .pbadge, html[lang="zh-Hans"] .ahead span { text-transform: none; }
+    @media (min-width: 1200px) { .rail .lang a, .rail .lang a.on { padding: 6px 9px; font: inherit; line-height: 1; letter-spacing: inherit; border-left: 0; } .rail .lang a + a { border-left: 1px solid var(--line-2) !important; } .rail .lang a[aria-current="page"] { color: #fff; } }
+    /* related-plugin line under the hero buttons: tag + plain explanation */
+    .hplug { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 14px 0 0; font-size: .92rem; color: var(--ink); }
+    .ptag { display: inline-block; padding: 4px 9px; border: 1px solid rgba(226,80,42,.5); background: var(--cin-soft); color: var(--cin-ink); text-decoration: none;
+      font: 500 .68rem/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .ptag:hover { border-color: var(--cin); }
+    html[lang="zh-Hans"] .ptag { text-transform: none; letter-spacing: .06em; font-family: var(--mono), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif; }
+    @media (max-width: 520px) { .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .actions .btn { justify-content: center; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#motivation">跳到正文</a>
+  <nav class="rail" aria-label="章节">
+    <a class="rbrand" href="#top"><span class="h" lang="zh-Hans" aria-hidden="true">灵</span><span><b>Lingxi</b><small>ISSTA 2026</small></span></a>
+    <nav class="lang in-rail" aria-label="Language"><a href="index.html" hreflang="en" lang="en">EN</a><a href="index.zh.html" hreflang="zh-Hans" lang="zh-Hans" aria-current="page">中文</a></nav>
+    <ol>
+      <li><a href="#motivation"><i>01</i>动机</a></li>
+      <li><a href="#method"><i>02</i>方法</a>
+        <ol><li><a href="#phase1">知识构建</a></li><li><a href="#phase2">分析扩展</a></li><li><a href="#phase3">Issue 解决</a></li></ol></li>
+      <li><a href="#results"><i>03</i>实验评估</a>
+        <ol><li><a href="#rq1">RQ1 · 整体效果</a></li><li><a href="#rq2">RQ2 · 消融实验</a></li><li><a href="#rq3">RQ3 · 知识维度</a></li></ol></li>
+      <li><a href="#outlook"><i>04</i>局限与展望</a></li>
+      <li><a href="#practice"><i>05</i>讨论</a></li>
+      <li><a href="#cite"><i>06</i>引用</a></li>
+    </ol>
+    <div class="rlinks"><a href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">论文 ↗</a><a href="#cite">BibTeX</a></div>
+  </nav>
+  <header class="topbar" id="navbar" aria-label="页面导航">
+    <a class="brand" href="#top" aria-label="灵犀，回到顶部"><span class="h" lang="zh-Hans" aria-hidden="true">灵</span><b>Lingxi</b><span class="sub">· ISSTA 2026</span></a>
+    <nav class="nav" aria-label="章节（简版）">
+      <a class="opt" href="#motivation">动机</a>
+      <a href="#method">方法</a>
+      <a href="#results">结果</a>
+      <a class="opt" href="#practice">讨论</a>
+      <a class="opt" href="#cite">引用</a>
+      <a class="out" href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">论文 ↗</a>
+      <nav class="lang" aria-label="Language"><a href="index.html" hreflang="en" lang="en">EN</a><a href="index.zh.html" hreflang="zh-Hans" lang="zh-Hans" aria-current="page">中文</a></nav>
+    </nav>
+  </header>
+
+  <!-- ===================================================================== HERO -->
+  <section class="wrap hero" id="top">
+    <div class="kicker award">ISSTA 2026 · 杰出论文</div>
+    <h1>Lingxi<span class="han" lang="zh-Hans">灵犀</span></h1>
+    <div class="hero-grid">
+      <div>
+        <p class="ptitle">Repository-Level Issue Resolution Framework Enhanced by Procedural Knowledge Guided Scaling</p>
+        <p class="hsub">有经验的开发者在动手探索之前，心里已经有数：一类问题该怎么诊断、怎么修，以及为什么。灵犀从仓库自身的历史中恢复这种<strong>过程性知识</strong>，并把它摆到 coding agent 面前，让分析、规划和修复都沿着适合当前 issue 的过程进行。</p>
+        <p class="authors">Xu Yang<sup>1</sup>, Jiayuan Zhou<sup>2</sup>, Michael Pacheco<sup>2</sup>, Wenhan Zhu<sup>2</sup>,
+          Pengfei He<sup>1</sup>, Shaowei Wang<sup>1,∗</sup>, Kui Liu<sup>3</sup>, Ruiqi Pan<sup>3</sup></p>
+        <p class="affils"><sup>1</sup>University of Manitoba, Canada · <sup>2</sup>Huawei, Canada ·
+          <sup>3</sup>Huawei Software Engineering Application Technology Lab, China · <sup>∗</sup>通讯作者</p>
+        <div class="actions" role="group" aria-label="主要链接">
+          <a class="btn primary" href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">论文 · arXiv</a>
+          <a class="btn" href="https://conf.researchr.org/details/issta-2026/issta-2026-research-papers/179/Lingxi-Repository-Level-Issue-Resolution-Framework-Enhanced-by-Procedural-Knowledge-" target="_blank" rel="noopener">ISSTA 2026</a>
+          <a class="btn" href="#method">方法概览</a>
+          <a class="btn" href="#cite">BibTeX</a>
+        </div>
+        <p class="hplug"><a class="ptag" href="#practice">相关插件：Lingxi Advisor</a><span>基于同一思路，并非本文的复现。</span></p>
+      </div>
+      <aside class="box hot ledger" aria-label="主要结果">
+        <span class="tag hot">主要结果 · SWE-bench Verified</span>
+        <div class="big"><b>74.6</b><span>% Pass@1</span></div>
+        <p>基础模型为 Claude 4 Sonnet。在三个基础模型上都高于所有对比框架。</p>
+        <dl>
+          <div><dt>相同模型下，对比最强的对比框架</dt><dd>+4.2 pp</dd></div>
+          <div><dt>可迁移知识对比原始 issue–patch 对（218 个 issue 的消融）</dt><dd class="j">+6.5 pp</dd></div>
+          <div><dt>对比范围</dt><dd>5 个框架 · 3 个基础模型</dd></div>
+          <div><dt>评测集</dt><dd>500 个真实 Python issue</dd></div>
+        </dl>
+      </aside>
+    </div>
+    <div class="claim takehome reveal"><span class="tag">核心观点</span><b>知识在前，探索在后。</b>把同类 issue 背后的过程性知识交给 agent：它们是怎样被理解、分析和修复的，以及为什么。这样，它的探索就有了针对当前 issue 的方向。</div>
+  </section>
+
+  <main>
+  <!-- ===================================================================== 01 MOTIVATION -->
+  <section class="wrap section" id="motivation">
+    <div class="shead reveal">
+      <div><div class="kicker">01 · 动机</div>
+      <h2><em>隐性知识</em>告诉开发者该往哪里看。</h2></div>
+      <div class="prose"><p class="lede">有经验的开发者面对一个 issue，是怎么入手的？在开始探索之前，他们其实已经知道一些东西。</p>
+      <p>在学习和工作中，开发者自然积累了隐性知识：某一类问题该怎么理解、怎么分析、怎么解决。新问题很少和旧问题完全一样，所以他们会从很多过去的案例里抽出几个共通的模式，由这些模式一起决定先去哪里看。知识在前，探索在后。</p></div>
+    </div>
+
+    <div class="box hot block reveal">
+      <span class="tag hot">有经验的开发者</span>
+      <h3>借助过去案例的共通之处</h3>
+      <div class="dev">
+        <div><svg class="art devpath" viewBox="-10 -8 740 246" role="img" aria-label="从慢页面出发，代码中有很多条路。开发者只走其中一条：经过视图和 ORM，找到 N+1 查询，并且很早就排除了一条岔路。路上的三个编号标出了过程。"><g font-family="JetBrains Mono" font-size="17"><line x1="34" y1="110" x2="150" y2="48" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="34" y1="110" x2="150" y2="110" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="34" y1="110" x2="150" y2="176" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="48" x2="290" y2="26" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="48" x2="290" y2="88" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="110" x2="290" y2="88" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="110" x2="290" y2="150" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="176" x2="290" y2="150" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="150" y1="176" x2="290" y2="204" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="26" x2="430" y2="58" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="88" x2="430" y2="58" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="88" x2="430" y2="124" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="150" x2="430" y2="124" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="150" x2="430" y2="192" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="290" y1="204" x2="430" y2="192" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="58" x2="560" y2="36" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="124" x2="560" y2="110" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="192" x2="560" y2="184" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="58" x2="560" y2="110" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><line x1="430" y1="124" x2="560" y2="184" stroke="rgba(22,28,26,0.15)" stroke-width="2"/><path d="M34,110 L150,110 L290,88 L430,124 L560,110" fill="none" stroke="#e2502a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M34,110 L150,48 L290,26" fill="none" stroke="#e2502a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".65"/><path d="M560,110 Q612,98 650,101" fill="none" stroke="#e2502a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="220" cy="99" r="13" fill="#e2502a"/><text x="220" y="105" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">1</text><circle cx="360" cy="106" r="13" fill="#e2502a"/><text x="360" y="112" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">2</text><circle cx="495" cy="117" r="13" fill="#e2502a"/><text x="495" y="123" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">3</text><circle cx="150" cy="176" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="290" cy="150" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="290" cy="204" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="430" cy="58" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="430" cy="192" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="560" cy="36" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="560" cy="184" r="7" fill="#ffffff" stroke="rgba(22,28,26,0.50)" stroke-width="2"/><circle cx="150" cy="110" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="290" cy="88" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="430" cy="124" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="560" cy="110" r="6" fill="#e2502a" stroke="#e2502a" stroke-width="2"/><circle cx="150" cy="48" r="6" fill="#ffffff" stroke="#e2502a" stroke-width="2"/><circle cx="290" cy="26" r="6" fill="#ffffff" stroke="#e2502a" stroke-width="2"/><path d="M302,18 l0,16" stroke="#e2502a" stroke-width="3"/><text x="310" y="32" fill="rgba(22,28,26,0.68)">已排除</text><circle cx="34" cy="110" r="10" fill="#ffffff" stroke="#161c1a" stroke-width="2"/><text x="0" y="150" fill="rgba(22,28,26,0.83)">慢页面</text><text x="128" y="140" fill="rgba(22,28,26,0.83)">视图</text><text x="272" y="74" fill="rgba(22,28,26,0.83)">ORM</text><circle cx="668" cy="100" r="17" fill="rgba(47,143,108,.12)" stroke="#2f8f6c" stroke-width="2.5"/><path d="M660,100 l6,6 l11,-12" stroke="#2f8f6c" stroke-width="3" fill="none"/><text x="596" y="140" fill="#1f6b4f" font-weight="600">N+1 查询</text></g></svg><p class="cap">从一个慢页面出发，可以走的路有很多。开发者只走其中一条：经过视图和 ORM，找到逐条发出的查询，并且很早就排除了一条岔路。编号的几步就是过程；而“为什么”让这个过程能用到下一个慢页面上，哪怕换了一个代码库。这就是<strong>过程性知识</strong>：一类问题怎么诊断、怎么修，以及为什么。它是隐性的：存在于经验里，不在代码里。</p></div>
+        <div class="pk">
+          <span class="tag">过程性知识</span>
+          <p class="q">当页面加载很慢时：</p>
+          <ol><li><span>1</span>数一数数据库查询的次数</li><li><span>2</span>找到发出这些查询的循环</li><li><span>3</span>在查询日志里确认</li></ol>
+          <p class="why"><i>为什么</i>逐条查询，即 N+1 问题，是常见原因。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="box block reveal">
+      <span class="tag dim">今天的 coding agent 如何探索</span>
+      <h3>同样的情境下，coding agent 带着三样东西</h3>
+      <div class="ingr"><span class="inum">1</span><div><b>模型自身的知识</b><p>存在权重里的通用编程经验：很强，而且每一代模型都在变强。</p></div><div><svg class="art nn" viewBox="0 0 330 92" role="img" aria-label="一个小型神经网络，代表存在模型权重中的通用经验。"><g stroke="rgba(22,28,26,0.24)" stroke-width="1.2"><line x1="30" y1="18" x2="120" y2="8"/><line x1="30" y1="18" x2="120" y2="32"/><line x1="30" y1="18" x2="120" y2="56"/><line x1="30" y1="18" x2="120" y2="80"/><line x1="30" y1="46" x2="120" y2="8"/><line x1="30" y1="46" x2="120" y2="32"/><line x1="30" y1="46" x2="120" y2="56"/><line x1="30" y1="46" x2="120" y2="80"/><line x1="30" y1="74" x2="120" y2="8"/><line x1="30" y1="74" x2="120" y2="32"/><line x1="30" y1="74" x2="120" y2="56"/><line x1="30" y1="74" x2="120" y2="80"/><line x1="120" y1="8" x2="210" y2="8"/><line x1="120" y1="8" x2="210" y2="32"/><line x1="120" y1="8" x2="210" y2="56"/><line x1="120" y1="8" x2="210" y2="80"/><line x1="120" y1="32" x2="210" y2="8"/><line x1="120" y1="32" x2="210" y2="32"/><line x1="120" y1="32" x2="210" y2="56"/><line x1="120" y1="32" x2="210" y2="80"/><line x1="120" y1="56" x2="210" y2="8"/><line x1="120" y1="56" x2="210" y2="32"/><line x1="120" y1="56" x2="210" y2="56"/><line x1="120" y1="56" x2="210" y2="80"/><line x1="120" y1="80" x2="210" y2="8"/><line x1="120" y1="80" x2="210" y2="32"/><line x1="120" y1="80" x2="210" y2="56"/><line x1="120" y1="80" x2="210" y2="80"/><line x1="210" y1="8" x2="300" y2="32"/><line x1="210" y1="8" x2="300" y2="56"/><line x1="210" y1="32" x2="300" y2="32"/><line x1="210" y1="32" x2="300" y2="56"/><line x1="210" y1="56" x2="300" y2="32"/><line x1="210" y1="56" x2="300" y2="56"/><line x1="210" y1="80" x2="300" y2="32"/><line x1="210" y1="80" x2="300" y2="56"/></g><g fill="#ffffff" stroke="rgba(22,28,26,0.77)" stroke-width="1.6"><circle cx="30" cy="18" r="6"/><circle cx="30" cy="46" r="6"/><circle cx="30" cy="74" r="6"/><circle cx="120" cy="8" r="6"/><circle cx="120" cy="32" r="6"/><circle cx="120" cy="56" r="6"/><circle cx="120" cy="80" r="6"/><circle cx="210" cy="8" r="6"/><circle cx="210" cy="32" r="6"/><circle cx="210" cy="56" r="6"/><circle cx="210" cy="80" r="6"/><circle cx="300" cy="32" r="6"/><circle cx="300" cy="56" r="6"/></g></svg></div></div>
+      <div class="ingr"><span class="inum">2</span><div><b>当前的代码仓</b><p>它现在的代码和文档。</p></div><div class="cd"><span>代码库与文档</span><svg class="art graph" viewBox="0 0 330 90" role="img" aria-label="交织的文件和链接，代表代码库及其文档。"><g stroke="rgba(22,28,26,0.33)" stroke-width="1.3"><line x1="20" y1="16" x2="70" y2="15"/><line x1="20" y1="16" x2="20" y2="42"/><line x1="20" y1="16" x2="60" y2="39"/><line x1="20" y1="16" x2="11" y2="77"/><line x1="70" y1="15" x2="122" y2="17"/><line x1="70" y1="15" x2="60" y2="39"/><line x1="122" y1="17" x2="162" y2="10"/><line x1="122" y1="17" x2="123" y2="50"/><line x1="162" y1="10" x2="123" y2="50"/><line x1="162" y1="10" x2="176" y2="38"/><line x1="222" y1="15" x2="276" y2="17"/><line x1="222" y1="15" x2="176" y2="38"/><line x1="222" y1="15" x2="225" y2="44"/><line x1="276" y1="17" x2="311" y2="9"/><line x1="276" y1="17" x2="270" y2="48"/><line x1="311" y1="9" x2="270" y2="48"/><line x1="311" y1="9" x2="325" y2="48"/><line x1="20" y1="42" x2="60" y2="39"/><line x1="20" y1="42" x2="11" y2="77"/><line x1="20" y1="42" x2="56" y2="76"/><line x1="60" y1="39" x2="56" y2="76"/><line x1="123" y1="50" x2="108" y2="68"/><line x1="123" y1="50" x2="157" y2="71"/><line x1="176" y1="38" x2="225" y2="44"/><line x1="176" y1="38" x2="157" y2="71"/><line x1="176" y1="38" x2="213" y2="77"/><line x1="225" y1="44" x2="270" y2="48"/><line x1="225" y1="44" x2="213" y2="77"/><line x1="225" y1="44" x2="256" y2="80"/><line x1="270" y1="48" x2="325" y2="48"/><line x1="270" y1="48" x2="256" y2="80"/><line x1="270" y1="48" x2="320" y2="73"/><line x1="325" y1="48" x2="320" y2="73"/><line x1="11" y1="77" x2="56" y2="76"/><line x1="56" y1="76" x2="108" y2="68"/><line x1="108" y1="68" x2="157" y2="71"/><line x1="213" y1="77" x2="256" y2="80"/><line x1="256" y1="80" x2="320" y2="73"/></g><g fill="#ffffff" stroke="rgba(22,28,26,0.66)" stroke-width="1.4"><circle cx="20" cy="16" r="4"/><circle cx="70" cy="15" r="4"/><circle cx="122" cy="17" r="4"/><circle cx="162" cy="10" r="4"/><circle cx="222" cy="15" r="4"/><circle cx="276" cy="17" r="4"/><circle cx="311" cy="9" r="4"/><circle cx="20" cy="42" r="4"/><circle cx="60" cy="39" r="4"/><circle cx="123" cy="50" r="4"/><circle cx="176" cy="38" r="4"/><circle cx="225" cy="44" r="4"/><circle cx="270" cy="48" r="4"/><circle cx="325" cy="48" r="4"/><circle cx="11" cy="77" r="4"/><circle cx="56" cy="76" r="4"/><circle cx="108" cy="68" r="4"/><circle cx="157" cy="71" r="4"/><circle cx="213" cy="77" r="4"/><circle cx="256" cy="80" r="4"/><circle cx="320" cy="73" r="4"/></g></svg></div></div>
+      <div class="ingr"><span class="inum">3</span><div><b>探索与遍历</b><p>采样、分支、重试：很多条轨迹。</p></div><div><svg class="art traj" viewBox="0 0 712 120" role="img" aria-label="从同一起点散开的许多采样轨迹，大多以叉号结束。"><g><circle cx="40" cy="60" r="10" fill="#ffffff" stroke="#161c1a" stroke-width="2"></circle><path d="M40,60 C233,79 401,16 548,9" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M542.1514917695473,3.433045267489712 l12,12 M554.1514917695473,3.433045267489712 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C151,46 249,35 405,20" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M399.1090534979424,14.374944602722383 l12,12 M411.1090534979424,14.374944602722383 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C264,97 461,43 626,25" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M619.6777263374486,18.827955049066162 l12,12 M631.6777263374486,18.827955049066162 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C144,51 461,18 660,36" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M653.8575102880659,29.592076606521047 l12,12 M665.8575102880659,29.592076606521047 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C164,52 491,68 618,46" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M611.6484053497943,40.26730927508706 l12,12 M623.6484053497943,40.26730927508706 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C219,27 477,58 609,50" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M603.0504115226338,44.45365305476417 l12,12 M615.0504115226338,44.45365305476417 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C201,14 249,64 414,61" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M408.0635288065844,54.95110794555239 l12,12 M420.0635288065844,54.95110794555239 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C163,48 303,39 473,62" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M466.6877572016461,55.759673947451724 l12,12 M478.6877572016461,55.759673947451724 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C160,56 391,69 565,75" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M558.9230967078189,69.27935106046218 l12,12 M570.9230967078189,69.27935106046218 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C244,76 347,96 471,76" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M464.76954732510285,69.91013928458372 l12,12 M476.76954732510285,69.91013928458372 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C149,35 504,62 630,86" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M624.227109053498,80.0520386198164 l12,12 M636.227109053498,80.0520386198164 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C248,76 365,113 493,90" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M487.2957818930041,83.70504906616017 l12,12 M499.2957818930041,83.70504906616017 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C275,21 344,84 500,100" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M493.97556584362144,93.66917062361506 l12,12 M505.97556584362144,93.66917062361506 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,60 C122,13 274,129 430,110" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M424.2664609053498,103.54440329218107 l12,12 M436.2664609053498,103.54440329218107 l-12,12" stroke="#9aa19d" stroke-width="2"></path></g></svg></div></div>
+      <p class="ingr-plus">③ 借助 ① 去探索 ②。那么问题来了：面对这个 issue，对的那条经验会被想起来吗？</p>
+    </div>
+
+    <div class="phead block reveal" style="margin-top:48px">
+      <div><div class="kicker">今天的 agent 缺什么</div>
+      <h3 class="ph">不一定，原因有两个。</h3></div>
+      <div class="prose"><p>现在的 agent 在一般意义上很会探索。但有两件事，让这种探索没能沿着适合当前 issue 的过程进行。</p></div>
+    </div>
+    <div class="limits">
+      <article class="box ash limit reveal">
+        <span class="tag ash">缺少针对任务的方向 <span class="refchip">③ 探索</span></span>
+        <h3>会探索，但不知道这个 issue 最好怎么探索</h3>
+        <div class="limit-grid">
+          <div>
+            <p>模型在大量代码上训练过，已经大体知道怎样探索一个代码仓：搜索、阅读、复现、测试。它无法事先知道的，是在这个代码仓里，这个任务最好怎么入手：该用哪条实践，先检查什么，修改又要怎样和现有代码契合。</p>
+            <p>没有什么能保证对的实践在对的时刻被想起来，而私有代码库本来就不在训练数据里。于是提升只能靠多试：更多采样，更多重试。覆盖面变大了，针对这个 issue 的方向却没有。</p>
+          </div>
+          <div><svg class="art scatter" viewBox="0 0 712 150" role="img" aria-label="从 issue 出发散开的许多采样轨迹，大多以叉号结束，只有一条到达对勾。"><g><circle cx="40" cy="75" r="10" fill="#ffffff" stroke="#161c1a" stroke-width="2"></circle><path d="M40,75 C204,117 331,9 496,17" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M489.5223765432099,10.66764403292181 l12,12 M501.5223765432099,10.66764403292181 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C277,68 237,33 367,18" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M360.7391975308642,11.54729740424185 l12,12 M372.7391975308642,11.54729740424185 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C136,92 345,32 528,36" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M522.2337962962963,29.649172997784113 l12,12 M534.2337962962963,29.649172997784113 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C153,100 239,57 430,39" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M424.0061728395062,32.973270813548595 l12,12 M436.0061728395062,32.973270813548595 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C222,137 331,34 512,56" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M506.05632716049377,49.5195908515353 l12,12 M518.0563271604938,49.5195908515353 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C236,112 376,84 554,65" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M548.3842592592592,59.28813311174423 l12,12 M560.3842592592592,59.28813311174423 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C249,71 535,50 667,72" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M660.9899691358024,66.27889759417538 l12,12 M672.9899691358024,66.27889759417538 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C153,59 484,77 630,80" fill="none" stroke="#2f8f6c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M622.8734567901234,80.49188429882874 l5,5 l9,-10" stroke="#2f8f6c" stroke-width="3" fill="none"></path><path d="M40,75 C163,121 385,69 553,94" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M547.0347222222222,87.92709322570434 l12,12 M559.0347222222222,87.92709322570434 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C171,31 401,97 546,105" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M540.4737654320987,98.58452437480214 l12,12 M552.4737654320987,98.58452437480214 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C231,106 206,115 390,104" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M384.19058641975306,98.4641777461222 l12,12 M396.19058641975306,98.4641777461222 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C236,118 373,108 524,122" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M518.1851851851852,115.56605333966445 l12,12 M530.1851851851852,115.56605333966445 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C240,115 246,127 398,124" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M392.45756172839504,117.89015115542895 l12,12 M404.45756172839504,117.89015115542895 l-12,12" stroke="#9aa19d" stroke-width="2"></path><path d="M40,75 C135,141 318,158 453,139" fill="none" stroke="#b3b8b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M447.0077160493827,133.43647119341563 l12,12 M459.0077160493827,133.43647119341563 l-12,12" stroke="#9aa19d" stroke-width="2"></path></g></svg>
+            <p class="prior">相关工作：测试时扩展，先采样大量候选补丁再从中挑选，例如 Trae、DARS、DEI。</p></div>
+        </div>
+      </article>
+      <article class="box ash limit reveal">
+        <span class="tag ash">停留在表面 <span class="refchip">过程性知识</span></span>
+        <h3>没有过程性知识，或只把历史当原始数据用</h3>
+        <div class="limit-grid">
+          <div>
+            <p>很多 agent 完全不用：它们只依据现在的代码和文档工作，而这些只记录了当前状态，没有记录类似的 issue 当初是怎么处理的。用到历史的那些，也只是把它当原始数据：以文本形式检索过去的 issue 报告和补丁。改了什么保留了下来，背后的过程却丢了：这个 issue 是怎么诊断的，为什么这样修。</p>
+            <p>照搬的修改只有在新 issue 几乎一模一样时才有用。真正能迁移的，是修改背后的过程。</p>
+          </div>
+          <div><div class="docrow" role="img" aria-label="过去的修复被当作原始数据保存：issue 报告和最终补丁。中间丢失的是过程性知识：怎么诊断的、为什么这样修、怎么验证、怎么契合现有代码。">
+            <div class="doc"><b>Issue 报告</b><i></i><i></i><i class="s"></i><i></i></div>
+            <div class="mid"><div class="pairline"><span>当作原始数据保存</span></div>
+              <div class="lost"><span class="tag">丢失的：过程性知识</span>
+                <ul><li><b>怎么诊断的</b>根因分析步骤</li><li><b>为什么这样修</b>修复模式</li><li><b>怎么验证</b>检查清单 · 测试</li><li><b>怎么契合代码</b>设计实践</li></ul></div></div>
+            <div class="doc"><b>最终补丁</b><i class="p"></i><i class="m"></i><i class="p"></i><i></i></div>
+          </div>
+            <p class="prior">相关工作：使用当前代码仓的代码图和 AST，例如 Agentless、AutoCodeRover、CGM；以文本形式使用相似的历史 issue，例如 SemAgent。</p></div>
+        </div>
+      </article>
+    </div>
+    <div class="claim block reveal"><span class="tag">灵犀做了什么</span>灵犀从代码仓自己的历史 issue 和补丁中恢复过程，把它抽象成能迁移到类似 issue 的知识；新 issue 到来时，再把相关的部分摆到 agent 面前。过去的修复是知识的来源，agent 拿到的是过程。</div>
+  </section>
+
+  <!-- ===================================================================== 02 METHOD -->
+  <section class="wrap section" id="method">
+    <div class="shead reveal">
+      <div><div class="kicker">02 · 方法</div>
+      <h2>离线恢复过程，<em>引导</em>每一个新 issue。</h2></div>
+      <div class="prose"><p>灵犀分三个阶段。阶段 1 对每个代码仓的历史只运行一次；阶段 2 和 3 针对每个新 issue 运行：检索到的知识先引导分析，再引导规划和修复。</p></div>
+    </div>
+    <figure class="box figure reveal">
+      <div class="scroll"><div class="figwrap"><img src="assets/overview.svg" width="1203" height="495" loading="lazy" alt="灵犀总览。左侧为离线阶段：知识 agent 通过逆向推理把历史 issue–patch 对变成针对具体 issue 的知识，再通过抽象变成可迁移知识，存入知识库。右侧为在线阶段：新 issue 检索并重排知识，每份知识引导一个分析 agent，各路分析再综合成一份完整分析。下方：规划 agent 和修复 agent 利用这份分析和 issue 修复知识生成最终补丁。">
+        <a class="pbadge" href="#phase1" style="left:1.6%;top:12.4%"><b>1</b>阶段 1</a>
+        <a class="pbadge" href="#phase2" style="left:39.7%;top:11.1%"><b>2</b>阶段 2</a>
+        <a class="pbadge" href="#phase3" style="left:39.7%;top:60.2%"><b>3</b>阶段 3</a></div></div>
+      <div class="hint" aria-hidden="true">← 左右滑动查看完整图 →</div>
+      <figcaption class="cap">灵犀总览，由论文图 3 简化而来。图中的编号对应下文的三个阶段：1 知识构建，2 知识引导的分析扩展，3 issue 解决。</figcaption>
+    </figure>
+
+    <!-- Phase 1 -->
+    <div class="phase" id="phase1">
+      <div class="phead reveal">
+        <div><div class="kicker num"><b>1</b>阶段 1 · 离线知识构建</div>
+        <h3 class="ph">从<em>针对具体 issue</em> 到<em>可迁移</em>的知识。</h3></div>
+        <div class="prose"><p>一次历史修复只留下两样东西：issue 报告和最终补丁，中间的过程是缺失的。知识 agent 分两步把它找回来。<strong>第一步</strong>做逆向推理：从补丁出发，浏览 issue 发生时的代码仓快照，解释每一处修改为什么能修好这个 issue。<strong>第二步</strong>把结果抽象化，使它能迁移到相似但不完全相同的 issue 上。</p>
+          <p>知识按代码仓、从它自己的历史中构建；对每个目标 issue，只使用在它之前创建的 issue。</p></div>
+      </div>
+      <div class="box orange step reveal">
+        <div class="step-h"><span class="tag orange">第一步 · 逆向推理</span><h4>针对具体 issue 的知识</h4>
+          <p>知识 agent 从补丁出发，沿 14 个维度解释每一处修改为什么能修好这个 issue。</p></div>
+        <div class="acols">
+          <div><div class="ahead">理解 <span>8 个维度</span></div><div class="awhy">定位并理解这个 issue 需要什么</div>
+            <div class="ag"><b>代码</b><div><span class="ch">相关架构</span><span class="ch">依赖分析</span><span class="ch">调用链</span></div></div>
+            <div class="ag"><b>问题</b><div><span class="ch">缺陷分类</span><span class="ch lift">根因分析</span><span class="ch">当前行为与预期行为</span></div></div>
+            <div class="ag"><b>使用</b><div><span class="ch">使用场景示例</span><span class="ch">功能特性</span></div></div></div>
+          <div><div class="ahead">修复 <span>6 个维度</span></div><div class="awhy">修好它并验证修复需要什么</div>
+            <div class="ag"><b>修改</b><div><span class="ch">修复模式</span><span class="ch">具体修复步骤</span></div></div>
+            <div class="ag"><b>验证</b><div><span class="ch">修复检查清单</span><span class="ch">测试用例</span></div></div>
+            <div class="ag"><b>契合</b><div><span class="ch">设计模式与编码实践</span><span class="ch">解决方案结论</span></div></div></div>
+        </div>
+        <blockquote class="kq s1"><span class="tag">根因分析 · django #14200 · 第一步</span>
+          <p>"The bug was caused by:</p>
+          <ol><li>Direct instantiation of <code>RegexURLResolver</code> instead of using the memoized <code>get_resolver()</code></li>
+            <li>Each request created a new <code>RegexURLResolver</code> instance, even when processing the same URLconf</li>
+            <li>The memoization optimization in <code>urlresolvers.get_resolver()</code> was bypassed</li>
+            <li>No consideration for memory/performance impact of creating new resolver instances"</li></ol></blockquote>
+      </div>
+      <div class="vjoin reveal" aria-hidden="true"><span>抽象</span></div>
+      <div class="box pink step reveal">
+        <div class="step-h"><span class="tag pink">第二步 · 抽象</span><h4>可迁移的知识</h4>
+          <p>把同样的知识改写给刚接触这个代码仓的人看：通用、可操作，并且结构化，便于后续阶段使用。</p></div>
+        <div class="acols">
+          <div><div class="ahead">理解</div><div class="awhy">通用、可操作</div>
+            <div class="ag"><b>代码</b><div><span class="ch">相关架构</span><span class="ch">依赖分析</span><span class="ch">涉及的类与方法</span></div></div>
+            <div class="ag"><b>问题</b><div><span class="ch lift">通用根因分析步骤</span><span class="ch">缺陷分类</span><span class="ch">功能特性</span></div></div></div>
+          <div><div class="ahead">修复</div><div class="awhy">供规划和修复直接使用</div>
+            <div class="ag"><b>修改</b><div><span class="ch">通用修复模式</span></div></div>
+            <div class="ag"><b>验证</b><div><span class="ch">通用修复检查清单</span></div></div>
+            <div class="ag"><b>契合</b><div><span class="ch">设计模式与编码实践</span></div></div></div>
+        </div>
+        <blockquote class="kq s2"><span class="tag">通用根因分析步骤 · 同一个 issue · 第二步</span>
+          <div class="kq2"><ol><li>"Identify the request handling flow and URL resolution process</li>
+              <li>Review how URL configuration is managed during request processing</li>
+              <li>Analyze object creation patterns and resource usage</li></ol>
+            <ol start="4"><li>Check for performance optimization opportunities like caching/memoization</li>
+              <li>Verify thread-safety and resource cleanup mechanisms</li>
+              <li>Test behavior with different URL configuration scenarios"</li></ol></div></blockquote>
+        <p class="kq-note">这个 issue：每个请求都新建一个 URL resolver，而不是复用已缓存的那个，白白浪费内存和时间。第一步点名了具体的类和被绕过的带缓存函数。第二步把它变成了在任何代码库里诊断类似问题的方法：顺着请求流程走，看看每次请求都创建了哪些对象，再检查是否有现成的缓存被绕过。</p>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase" id="phase2">
+      <div class="phead reveal">
+        <div><div class="kicker num"><b>2</b>阶段 2 · 知识引导的分析扩展</div>
+        <h3 class="ph">每个<em>分析 agent</em> 一份知识。</h3></div>
+        <div class="prose"><p>新 issue 到来后，灵犀先把它总结成四个字段，再检索相似历史 issue 的知识：向量检索保留前 20 个，重排模型排序后，保留最相关的 3 个。</p>
+          <p><strong>为什么一个 agent 只给一份知识？</strong>如果把检索到的知识都塞进一个长提示里，模型往往会丢掉埋在中间的内容。所以每份知识各自引导一个分析 agent：三份知识，三个 agent，各自沿着不同的过程分析，各写一份报告。分析综合再保留其中有支撑、互补、准确、完整的部分，形成一份综合分析。相关知识不再靠模型自己想起来，而是直接摆到 agent 面前。</p></div>
+      </div>
+      <div class="box block reveal" style="padding:18px">
+        <div class="scroll"><svg class="flow2" viewBox="0 0 1680 430" role="img" aria-labelledby="p2t p2d"><title id="p2t">阶段 2：知识引导的分析扩展</title>
+<desc id="p2d">新 issue 被总结为核心问题、技术细节、预期与实际行为、相关代码。随后检索相似的历史 issue。知识 1、2、3 分别来自不同的历史 issue，交给分析 agent 1、2、3；每个 agent 看到 issue 和一份知识，写出一份报告。分析综合保留有支撑、互补、准确、完整的部分，形成一份综合分析。</desc>
+<rect x="0" y="10" width="300" height="400" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M0,24 V10 H14 M286,410 H300 V396" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="30" y="52" class="t" fill="#5b635f">新 issue</text>
+<text x="30" y="96" class="h" fill="#161c1a">结构化</text>
+<text x="30" y="132" class="h" fill="#161c1a">摘要</text>
+<circle cx="38" cy="179" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="186" class="p" fill="#5b635f">核心问题</text>
+<circle cx="38" cy="229" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="236" class="p" fill="#5b635f">技术细节</text>
+<circle cx="38" cy="279" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="286" class="p" fill="#5b635f">预期与实际</text>
+<circle cx="38" cy="329" r="5" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<text x="54" y="336" class="p" fill="#5b635f">相关代码</text>
+<rect x="350" y="140" width="190" height="130" fill="#f1f8f4" stroke="rgba(47,143,108,.55)"/>
+<path d="M350,154 V140 H364 M526,270 H540 V256" fill="none" stroke="#2f8f6c" stroke-width="2.5"/>
+<text x="374" y="180" class="t" fill="#1f6b4f">检索</text>
+<text x="374" y="216" class="p" fill="#5b635f">相似的历史</text>
+<text x="374" y="244" class="p" fill="#5b635f">issue</text>
+<path d="M300,210 C325.0,210 325.0,205 350,205" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="350" cy="205" r="4" fill="#e2502a"/>
+<rect x="590" y="20" width="230" height="100" fill="#fdf1f0" stroke="#e7a19d"/>
+<path d="M590,34 V20 H604 M806,120 H820 V106" fill="none" stroke="#d9706b" stroke-width="2.5"/>
+<text x="612" y="56" class="t" fill="#b0413c">知识 1</text>
+<text x="612" y="92" class="p" fill="#5b635f">来自历史 issue 1</text>
+<rect x="870" y="20" width="270" height="100" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M870,34 V20 H884 M1126,120 H1140 V106" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="892" y="56" class="t" fill="#5b635f">分析 agent 1</text>
+<text x="892" y="92" class="p" fill="#5b635f">issue + 知识 1</text>
+<rect x="1190" y="20" width="200" height="100" rx="6" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<rect x="1212" y="55" width="30" height="30" rx="6" fill="#F8CECC"/>
+<text x="1256" y="78" class="h2" fill="#161c1a">报告 1</text>
+<path d="M540,205 C565.0,205 565.0,70 590,70" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<circle cx="590" cy="70" r="4" fill="#2f8f6c"/>
+<path d="M820,70 C845.0,70 845.0,70 870,70" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="870" cy="70" r="4" fill="#e2502a"/>
+<path d="M1140,70 C1165.0,70 1165.0,70 1190,70" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1190" cy="70" r="4" fill="#e2502a"/>
+<path d="M1390,70 C1415.0,70 1415.0,215 1440,215" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1440" cy="215" r="4" fill="#e2502a"/>
+<rect x="590" y="150" width="230" height="100" fill="#fdf1f0" stroke="#e7a19d"/>
+<path d="M590,164 V150 H604 M806,250 H820 V236" fill="none" stroke="#d9706b" stroke-width="2.5"/>
+<text x="612" y="186" class="t" fill="#b0413c">知识 2</text>
+<text x="612" y="222" class="p" fill="#5b635f">来自历史 issue 2</text>
+<rect x="870" y="150" width="270" height="100" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M870,164 V150 H884 M1126,250 H1140 V236" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="892" y="186" class="t" fill="#5b635f">分析 agent 2</text>
+<text x="892" y="222" class="p" fill="#5b635f">issue + 知识 2</text>
+<rect x="1190" y="150" width="200" height="100" rx="6" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<rect x="1212" y="185" width="30" height="30" rx="6" fill="#FFE6A6"/>
+<text x="1256" y="208" class="h2" fill="#161c1a">报告 2</text>
+<path d="M540,205 C565.0,205 565.0,200 590,200" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<circle cx="590" cy="200" r="4" fill="#2f8f6c"/>
+<path d="M820,200 C845.0,200 845.0,200 870,200" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="870" cy="200" r="4" fill="#e2502a"/>
+<path d="M1140,200 C1165.0,200 1165.0,200 1190,200" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1190" cy="200" r="4" fill="#e2502a"/>
+<path d="M1390,200 C1415.0,200 1415.0,215 1440,215" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1440" cy="215" r="4" fill="#e2502a"/>
+<rect x="590" y="280" width="230" height="100" fill="#fdf1f0" stroke="#e7a19d"/>
+<path d="M590,294 V280 H604 M806,380 H820 V366" fill="none" stroke="#d9706b" stroke-width="2.5"/>
+<text x="612" y="316" class="t" fill="#b0413c">知识 3</text>
+<text x="612" y="352" class="p" fill="#5b635f">来自历史 issue 3</text>
+<rect x="870" y="280" width="270" height="100" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<path d="M870,294 V280 H884 M1126,380 H1140 V366" fill="none" stroke="rgba(22,28,26,.55)" stroke-width="2.5"/>
+<text x="892" y="316" class="t" fill="#5b635f">分析 agent 3</text>
+<text x="892" y="352" class="p" fill="#5b635f">issue + 知识 3</text>
+<rect x="1190" y="280" width="200" height="100" rx="6" fill="#fff" stroke="rgba(22,28,26,.22)"/>
+<rect x="1212" y="315" width="30" height="30" rx="6" fill="#A9CCF2"/>
+<text x="1256" y="338" class="h2" fill="#161c1a">报告 3</text>
+<path d="M540,205 C565.0,205 565.0,330 590,330" fill="none" stroke="#2f8f6c" stroke-width="2"/>
+<circle cx="590" cy="330" r="4" fill="#2f8f6c"/>
+<path d="M820,330 C845.0,330 845.0,330 870,330" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="870" cy="330" r="4" fill="#e2502a"/>
+<path d="M1140,330 C1165.0,330 1165.0,330 1190,330" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1190" cy="330" r="4" fill="#e2502a"/>
+<path d="M1390,330 C1415.0,330 1415.0,215 1440,215" fill="none" stroke="#e2502a" stroke-width="2"/>
+<circle cx="1440" cy="215" r="4" fill="#e2502a"/>
+<rect x="1440" y="10" width="240" height="400" fill="#fdf0eb" stroke="rgba(226,80,42,.6)"/>
+<path d="M1440,24 V10 H1454 M1666,410 H1680 V396" fill="none" stroke="#e2502a" stroke-width="2.5"/>
+<text x="1464" y="52" class="t" fill="#b93c1b">分析</text>
+<text x="1464" y="76" class="t" fill="#b93c1b">综合</text>
+<circle cx="1472" cy="123" r="5" fill="#e2502a"/>
+<text x="1488" y="130" class="h3" fill="#161c1a">有支撑</text>
+<circle cx="1472" cy="167" r="5" fill="#e2502a"/>
+<text x="1488" y="174" class="h3" fill="#161c1a">互补</text>
+<circle cx="1472" cy="211" r="5" fill="#e2502a"/>
+<text x="1488" y="218" class="h3" fill="#161c1a">准确</text>
+<circle cx="1472" cy="255" r="5" fill="#e2502a"/>
+<text x="1488" y="262" class="h3" fill="#161c1a">完整</text>
+<text x="1464" y="350" class="m" fill="#b93c1b">→ 一份综合</text>
+<text x="1464" y="376" class="m" fill="#b93c1b">分析</text>
+</svg></div>
+        <div class="hint" aria-hidden="true">← 左右滑动查看完整流程 →</div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase" id="phase3">
+      <div class="phead reveal">
+        <div><div class="kicker num"><b>3</b>阶段 3 · Issue 解决</div>
+        <h3 class="ph">用<em>分析结果和 issue 修复知识</em>来规划和修复。</h3></div>
+        <div class="prose"><p>分析说明了哪里出了问题；阶段 3 用两个 agent 把它变成补丁。检索到的知识中与修复相关的部分，同时引导这两个 agent。</p></div>
+      </div>
+      <div class="p3 reveal">
+        <div class="box in1"><span class="tag dim">来自阶段 2</span><h4>综合分析</h4><p>根因 · 范围 · 约束</p><p>哪里出了问题、在代码的什么位置、修改不能破坏什么，由多路并行分析合并而成。</p></div>
+        <div class="box pink in2"><span class="tag pink">来自知识库</span><h4>Issue 修复知识</h4>
+          <ul class="plain"><li>通用修复模式</li><li>通用修复检查清单</li><li>设计模式与编码实践</li></ul>
+          <p class="redline">→ 决定计划改什么，以及改动怎样和代码库保持一致</p></div>
+        <svg class="wire" aria-hidden="true"></svg>
+        <div class="box plan"><span class="tag dim">规划 agent</span><p class="big3">探索 → 复现 → 规划</p>
+          <p>参考分析结果和 issue 修复知识，给出根因判断和精确到行的修改计划。它会探索代码、复现 issue，并把每一处计划中的修改和它要解决的问题对应起来。</p><span class="vlink" aria-hidden="true"></span></div>
+        <div class="box hot fix"><span class="tag hot">修复 agent</span><p class="big3">实现 → 测试 → 完善</p>
+          <p>实施修改，运行复现测试，不断完善直到测试通过，得到最终补丁。检查清单告诉它要验证什么。两个 agent 都使用四个工具：目录查看、文件查看、关键词搜索和字符串替换编辑器。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 03 RESULTS -->
+  <section class="wrap section" id="results">
+    <div class="shead reveal">
+      <div><div class="kicker">03 · 实验评估</div>
+      <h2>效果如何？<em>哪类知识</em>最有用？</h2></div>
+      <div class="prose"><p>所有实验都在 SWE-bench Verified 上进行：来自 12 个开源 Python 项目的 500 个真实 GitHub issue，每个都由隐藏测试检验。
+        Pass@1 是单次生成的补丁通过测试的 issue 比例。对每个目标 issue，知识只来自在它之前创建的 issue。</p>
+      <span class="when">商用模型的实验均在 2025 年 9 月前完成</span></div>
+    </div>
+
+    <div class="block-h reveal" id="rq1">
+      <div class="kicker">RQ1 · 整体效果</div>
+      <h3>在<em>相同基础模型</em>下，灵犀解决的 issue 最多。</h3>
+    </div>
+    <figure class="box chart reveal" style="margin:0">
+      <div class="legend" aria-hidden="true"><span><i style="background:#e2502a"></i>Lingxi</span><span><i style="background:#b3b8b5"></i>对比框架（相同基础模型）</span><span>Pass@1 (%)</span></div>
+      <div class="scroll"><svg class="rq1" viewBox="0 0 960 452" role="img" aria-labelledby="rq1-t rq1-d">
+<title id="rq1-t">RQ1：SWE-bench Verified 上的 Pass@1，按基础模型分组</title>
+<desc id="rq1-d">GPT-4.1 mini: mini-SWE-agent 23.94, Lingxi 45.20. Kimi-K2: mini-SWE-agent 43.80, OpenHands 65.40, Lingxi 70.33. Claude 4 Sonnet: mini-SWE-agent 64.93, SWE-agent 66.60, SWE-search 70.08, OpenHands 70.40, Augment v1 70.40, Lingxi 74.60.</desc>
+<line x1="40" x2="942" y1="281.0" y2="281.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="285.0" text-anchor="end" class="ax">20</text>
+<line x1="40" x2="942" y1="222.0" y2="222.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="226.0" text-anchor="end" class="ax">40</text>
+<line x1="40" x2="942" y1="163.0" y2="163.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="167.0" text-anchor="end" class="ax">60</text>
+<line x1="40" x2="942" y1="104.0" y2="104.0" stroke="rgba(22,28,26,.08)"/><text x="30" y="108.0" text-anchor="end" class="ax">80</text>
+<rect x="46.0" y="269.4" width="48" height="70.6" fill="#b3b8b5"/>
+<text x="70.0" y="261.4" text-anchor="middle" class="val">23.94</text>
+<text x="70.0" y="360" text-anchor="middle" class="nm">mini-SWE-</text><text x="70.0" y="375" text-anchor="middle" class="nm">agent</text>
+<rect x="122.0" y="206.7" width="48" height="133.3" fill="#e2502a"/>
+<text x="146.0" y="198.7" text-anchor="middle" class="val ours">45.20</text>
+<text x="146.0" y="360" text-anchor="middle" class="nm ours">Lingxi</text>
+<line x1="40.0" x2="176.0" y1="390" y2="390" stroke="rgba(22,28,26,.3)"/>
+<text x="108.0" y="412" text-anchor="middle" class="gn">GPT-4.1 mini</text>
+<text x="108.0" y="432" text-anchor="middle" class="gg">Lingxi +21.3 pp</text>
+<rect x="242.0" y="210.8" width="48" height="129.2" fill="#b3b8b5"/>
+<text x="266.0" y="202.8" text-anchor="middle" class="val">43.80</text>
+<text x="266.0" y="360" text-anchor="middle" class="nm">mini-SWE-</text><text x="266.0" y="375" text-anchor="middle" class="nm">agent</text>
+<rect x="318.0" y="147.1" width="48" height="192.9" fill="#b3b8b5"/>
+<text x="342.0" y="139.1" text-anchor="middle" class="val">65.40</text>
+<text x="342.0" y="360" text-anchor="middle" class="nm">OpenHands</text>
+<rect x="394.0" y="132.5" width="48" height="207.5" fill="#e2502a"/>
+<text x="418.0" y="124.5" text-anchor="middle" class="val ours">70.33</text>
+<text x="418.0" y="360" text-anchor="middle" class="nm ours">Lingxi</text>
+<line x1="236.0" x2="448.0" y1="390" y2="390" stroke="rgba(22,28,26,.3)"/>
+<text x="342.0" y="412" text-anchor="middle" class="gn">Kimi-K2</text>
+<text x="342.0" y="432" text-anchor="middle" class="gg">Lingxi +4.9 pp</text>
+<rect x="514.0" y="148.5" width="48" height="191.5" fill="#b3b8b5"/>
+<text x="538.0" y="140.5" text-anchor="middle" class="val">64.93</text>
+<text x="538.0" y="360" text-anchor="middle" class="nm">mini-SWE-</text><text x="538.0" y="375" text-anchor="middle" class="nm">agent</text>
+<rect x="590.0" y="143.5" width="48" height="196.5" fill="#b3b8b5"/>
+<text x="614.0" y="135.5" text-anchor="middle" class="val">66.60</text>
+<text x="614.0" y="360" text-anchor="middle" class="nm">SWE-agent</text>
+<rect x="666.0" y="133.3" width="48" height="206.7" fill="#b3b8b5"/>
+<text x="690.0" y="125.3" text-anchor="middle" class="val">70.08</text>
+<text x="690.0" y="360" text-anchor="middle" class="nm">SWE-search</text>
+<rect x="742.0" y="132.3" width="48" height="207.7" fill="#b3b8b5"/>
+<text x="766.0" y="124.3" text-anchor="middle" class="val">70.40</text>
+<text x="766.0" y="360" text-anchor="middle" class="nm">OpenHands</text>
+<rect x="818.0" y="132.3" width="48" height="207.7" fill="#b3b8b5"/>
+<text x="842.0" y="124.3" text-anchor="middle" class="val">70.40</text>
+<text x="842.0" y="360" text-anchor="middle" class="nm">Augment v1</text>
+<rect x="894.0" y="119.9" width="48" height="220.1" fill="#e2502a"/>
+<text x="918.0" y="111.9" text-anchor="middle" class="val ours">74.60</text>
+<text x="918.0" y="360" text-anchor="middle" class="nm ours">Lingxi</text>
+<line x1="508.0" x2="948.0" y1="390" y2="390" stroke="rgba(22,28,26,.3)"/>
+<text x="728.0" y="412" text-anchor="middle" class="gn">Claude 4 Sonnet</text>
+<text x="728.0" y="432" text-anchor="middle" class="gg">Lingxi +4.2 pp</text>
+<line x1="40" x2="942" y1="340" y2="340" stroke="rgba(22,28,26,.5)"/>
+<path d="M146.0,176.7 C236.0,106.7 298.0,102.5 418.0,102.5 S758.0,83.9 918.0,89.9" fill="none" stroke="#e2502a" stroke-width="2.5"/>
+<circle cx="146.0" cy="176.7" r="6" fill="#e2502a"/>
+<circle cx="418.0" cy="102.5" r="6" fill="#e2502a"/>
+<circle cx="918.0" cy="89.9" r="6" fill="#e2502a"/>
+<text x="86.0" y="68" class="thread">同一框架，更强的模型 → 45.2 · 70.3 · 74.6</text>
+</svg></div>
+      <div class="hint" aria-hidden="true">← 左右滑动查看全部三组 →</div>
+    </figure>
+    <div class="read reveal">
+      <p><span class="tag">怎么看</span>每组使用同一个基础模型，所以组内唯一的区别是框架。基线是排行榜上使用同一基础模型的领先方法，不包括多模型集成。</p>
+      <p><span class="tag">说明了什么</span>使用 Claude 4 Sonnet 时，灵犀达到 74.6%，比最强的对比框架 OpenHands 和 Augment v1（70.4%）高 4.2 个百分点。使用 Kimi-K2 时为 70.3 对 65.4。使用 GPT-4.1 mini 时，灵犀几乎是 mini-SWE-agent 的两倍：45.2 对 23.9。跨组来看，更强的模型让同一框架的成绩更高（红线），而灵犀在每一组都排第一。知识是在模型之上的补充，而不是替代。</p>
+    </div>
+
+    <div class="block-h reveal" id="rq2">
+      <div class="kicker">RQ2 · 消融实验 · 抽样 218 个 issue · Claude 4 Sonnet</div>
+      <h3>提升来自<em>可迁移知识</em>，并行分析在此基础上发挥作用。</h3>
+    </div>
+    <div class="box reveal"><div class="lollipop" role="img" aria-label="RQ2 消融实验，Claude 4 Sonnet 在 218 个 issue 上的 Pass@1：无知识、单路分析 67.43；无知识、并行分析 67.74；原始 issue–patch 对、并行分析 68.30；可迁移知识、单路分析 72.48；灵犀，可迁移知识加并行分析 74.80。"><div class="lp-row ash"><div class="lp-lab">无知识 · <b>单路分析</b></div><div class="lp-track"><span class="lp-stem" style="width:14.3%"></span><span class="lp-dot" style="left:14.3%"></span><span class="lp-val" style="left:14.3%">67.43</span></div></div><div class="lp-row ash"><div class="lp-lab">无知识 · <b>+ 并行分析</b></div><div class="lp-track"><span class="lp-stem" style="width:17.4%"></span><span class="lp-dot" style="left:17.4%"></span><span class="lp-val" style="left:17.4%">67.74</span></div></div><div class="lp-row jade"><div class="lp-lab">原始 issue–patch 对 · <b>+ 并行分析</b></div><div class="lp-track"><span class="lp-stem" style="width:23.0%"></span><span class="lp-dot" style="left:23.0%"></span><span class="lp-val" style="left:23.0%">68.30</span></div></div><div class="lp-row ink"><div class="lp-lab">可迁移知识 · <b>单路分析</b></div><div class="lp-track"><span class="lp-stem" style="width:64.8%"></span><span class="lp-dot" style="left:64.8%"></span><span class="lp-val" style="left:64.8%">72.48</span></div></div><div class="lp-row ours"><div class="lp-lab"><b class="lx">灵犀</b> · 可迁移知识 · <b>+ 并行分析</b></div><div class="lp-track"><span class="lp-stem" style="width:88.0%"></span><span class="lp-dot" style="left:88.0%"></span><span class="lp-val" style="left:88.0%">74.80</span></div></div><div class="lp-row axis" aria-hidden="true"><div class="lp-lab"></div><div class="lp-axis"><span style="left:0%">66</span><span style="left:20%">68</span><span style="left:40%">70</span><span style="left:60%">72</span><span style="left:80%">74</span><span style="left:100%">76</span><em>Pass@1 (%)</em></div></div></div></div>
+    <div class="callouts reveal">
+      <div class="box hot callout"><span class="bign">+6.5 pp</span><span class="txt"><b>原始 issue–patch 对 → 可迁移知识</b>68.30 → 74.80，两者都使用并行分析</span></div>
+      <div class="box callout"><span class="bign">+2.3 pp</span><span class="txt"><b>知识引导下的并行分析</b>72.48 → 74.80，两者都使用可迁移知识</span></div>
+    </div>
+    <div class="read reveal">
+      <p><span class="tag">怎么看</span>提升来自知识，还是来自并行的多个 agent？每一行去掉或替换灵犀的一个部分。这 218 个 issue 是统计抽样（95% 置信度，5% 误差范围）。</p>
+      <p><span class="tag">说明了什么</span>没有知识时，Pass@1 为 67.4 到 67.7。使用原始 issue–patch 对，也就是只有修复、没有过程，达到 68.3。可迁移的过程性知识带来最大的一步，到 74.8。并行分析在此基础上发挥作用：有知识时，它再带来 2.3 个百分点，因为每一路都沿着自己的那份知识分析，结论再合在一起；没有知识时，对同一份 issue 报告做多路并行分析，结果和单路分析接近。两者相互配合。</p>
+      <p class="note">这里的差值是绝对百分点；论文表 3 用相对 Δ 报告同样的结果。218 个 issue 的子集与 RQ1 中 500 个 issue 的结果范围不同。</p>
+    </div>
+
+    <div class="block-h reveal" id="rq3">
+      <div class="kicker">RQ3 · 哪类知识有用，在什么时候</div>
+      <h3><em>设计实践</em>最重要，各类知识的作用随阶段变化。</h3>
+    </div>
+    <div class="box heat-box reveal"><table class="heat"><caption class="sr-only">20 个 issue 中各知识维度在各阶段起决定作用的次数</caption>
+<thead><tr><th scope="col"><span class="sr-only">知识维度</span></th><th scope="col">分析<span>阶段 1</span></th><th scope="col">规划<span>阶段 2</span></th><th scope="col">修复<span>阶段 3</span></th><th scope="col" class="tot">总计<span>全部阶段</span></th></tr></thead><tbody>
+<tr><th scope="row">根因分析步骤</th><td class="c"><span style="background:rgba(226,80,42,0.69);color:#fff">7</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:47%"></i></span><b>7</b></td></tr>
+<tr><th scope="row">相关架构</th><td class="c"><span style="background:rgba(226,80,42,0.69);color:#fff">7</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:47%"></i></span><b>7</b></td></tr>
+<tr><th scope="row">缺陷分类</th><td class="c"><span style="background:rgba(226,80,42,0.37);color:#161c1a">3</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:20%"></i></span><b>3</b></td></tr>
+<tr><th scope="row">功能特性</th><td class="c"><span style="background:rgba(226,80,42,0.37);color:#161c1a">3</span></td><td class="c"><span class="z">·</span></td><td class="c"><span class="z">·</span></td><td class="tot"><span class="tb"><i style="width:20%"></i></span><b>3</b></td></tr>
+<tr class="top"><th scope="row">设计模式与编码实践</th><td class="c"><span class="z">·</span></td><td class="c"><span style="background:rgba(226,80,42,1.0);color:#fff">11</span></td><td class="c"><span style="background:rgba(226,80,42,0.45);color:#161c1a">4</span></td><td class="tot"><span class="tb"><i style="width:100%"></i></span><b>15</b></td></tr>
+<tr><th scope="row">通用修复模式</th><td class="c"><span class="z">·</span></td><td class="c"><span style="background:rgba(226,80,42,0.61);color:#fff">6</span></td><td class="c"><span style="background:rgba(226,80,42,0.77);color:#fff">8</span></td><td class="tot"><span class="tb"><i style="width:93%"></i></span><b>14</b></td></tr>
+<tr><th scope="row">修复检查清单</th><td class="c"><span class="z">·</span></td><td class="c"><span style="background:rgba(226,80,42,0.37);color:#161c1a">3</span></td><td class="c"><span style="background:rgba(226,80,42,0.77);color:#fff">8</span></td><td class="tot"><span class="tb"><i style="width:73%"></i></span><b>11</b></td></tr>
+</tbody></table></div>
+    <div class="read reveal">
+      <p><span class="tag">怎么看</span>我们选取了 20 个灵犀解决、而去掉知识的版本没解决的 issue。两位作者对比了每个 issue 的两条轨迹，标出每个阶段起决定作用的知识维度（Cohen's κ = 0.66）。格子里的数字是该维度在该阶段起决定作用的 issue 数；每个阶段一列的总和为 20。</p>
+      <p><span class="tag">说明了什么</span>分析阶段，根因分析步骤和相关架构占主导；规划阶段，设计模式与编码实践接手；修复阶段，修复模式和检查清单领先。总体来看，设计模式与编码实践最重要。</p>
+    </div>
+    <div class="box jade block reveal">
+      <span class="tag">设计实践长什么样 · sympy-23413</span>
+      <h4>非方阵的 Hermite 标准形计算有误。</h4>
+      <p>检索到的知识里有两条来自更早 sympy issue 的实践，在这个 issue 里变成了具体动作：</p>
+      <div class="dprow"><div class="pr">处理完整结构，而不是按形状猜测<span>来自 sympy #10785</span></div><div class="ar" aria-hidden="true">→</div><div class="ac">处理所有行，而不是 <code>min(m, n)</code> 行</div></div>
+      <div class="dprow"><div class="pr">加上边界保护<span>来自 sympy #17130</span></div><div class="ar" aria-hidden="true">→</div><div class="ac">列用完时停下：<code>if k &lt; 0: k = 0; break</code></div></div>
+      <div class="dprow no"><div class="pr">同一流程，去掉知识</div><div class="ar" aria-hidden="true">→</div><div class="ac">把问题归到 return 语句上，只修了表面，最终失败</div></div>
+      <p class="takebox">模型大体上知道这些实践。检索到的知识让它在<b>这个</b> issue 上想起<b>对的那一条</b>。</p>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 04 OUTLOOK -->
+  <section class="wrap section" id="outlook">
+    <div class="shead reveal">
+      <div><div class="kicker">04 · 局限与展望</div>
+      <h2>agent <em>遵循</em>知识时，知识的作用最大。</h2></div>
+      <div class="prose"><p>500 个 issue 中仍有 127 个未解决。我们抽取了其中 20 个失败案例分析原因。在 15 个案例中，相关知识其实已经给到，但 agent 把它放在一边，按自己的推理行事（论文称为 uninformed autonomy）；在另外 5 个案例中，检索到的知识太少，不足以引导修复。知识以什么方式、在什么时机到达 agent，和恢复知识本身同样重要。</p></div>
+    </div>
+    <div class="two reveal">
+      <div class="box"><span class="tag dim">上限 · 理想选择器，并非系统结果</span><div class="bign">79.2%</div>
+        <p>如果在灵犀的分析之后采样三个补丁，并由一个理想选择器在存在通过的补丁时总能选中它，500 个中会有 396 个通过。灵犀并没有这样的选择器；这个数字表示补丁选择还有提升空间。</p></div>
+      <div class="box"><span class="tag dim">下一步</span>
+        <ul class="plain"><li>把知识引导从分析阶段延伸到补丁生成。</li><li>在 agent 的自主性和知识引导之间取得平衡。</li>
+          <li>在 Python 之外验证：知识讲的是过程而不是语法，但 SWE-bench Verified 只覆盖 Python。</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== 05 PRACTICE -->
+  <section class="wrap section" id="practice">
+    <div class="shead reveal">
+      <div><div class="kicker">05 · 讨论</div>
+      <h2>从论文到实践：<em>代码从不记录的东西</em>。</h2></div>
+      <div class="prose"><div class="claim"><span class="tag">来自论文</span>过程性知识，即 issue 怎么诊断、怎么修以及为什么，补上了当前代码无法呈现的东西。</div>
+        <p style="margin-top:14px">它和你可能已经在用的工具互为补充。以 astropy issue #14182 为例：RST 表格目前只写一行表头，需求是让写出器能再加几行表头，比如单位。放到时间轴上，三类工具给出三种回答。</p></div>
+    </div>
+    <div class="taxis reveal">
+      <div class="tcol hot"><span class="tlab">过去</span><span class="tick"></span>
+        <div class="tcard"><b>灵犀</b><span>来自历史修复的过程与理由</span>
+          <div class="ex"><span class="exh">来自 #386 · 功能特性（原文）</span><ol><li>Supports reading/writing fixed-width formatted data</li><li>Handles configurable header structures</li><li>Supports various header configurations through <code>header_rows</code></li></ol></div></div></div>
+      <div class="tcol"><span class="tlab">现在</span><span class="tick"></span>
+        <div class="tcard"><b>DeepWiki</b><span>基于代码的文档、架构说明和问答</span>
+          <div class="ex"><span class="exh">io.ascii · RST 页面 <i>示意</i></span><ul><li>RST 格式位于 <code>io/ascii/rst.py</code></li><li>基于定宽表格类实现</li><li>每种格式有各自的表头类和数据类</li></ul></div></div></div>
+      <div class="tcol"><span class="tlab">计划中的改动</span><span class="tick"></span>
+        <div class="tcard"><b>OpenSpec</b><span>提案、需求、设计和实现任务</span>
+          <div class="ex"><span class="exh">提案 · RST 多行表头 <i>示意</i></span><ul><li><b>为什么</b>RST 输出需要单位</li><li><b>做什么</b>支持 <code>header_rows</code></li><li><b>任务</b>☐ 参数 ☐ 写出表头行 ☐ 测试</li></ul></div></div></div>
+    </div>
+    <p class="note reveal">同一个 astropy 问题，三种回答：视角互补，而非互相替代。DeepWiki 和 OpenSpec 两栏为示意；灵犀一栏引自 astropy #386 的可迁移知识原文。</p>
+    <div class="box hot tpa reveal">
+      <div class="tpa-h"><span class="tag hot">相关插件 · Lingxi Advisor</span><h3>给你的 coding agent 用上过程性知识</h3>
+        <p>灵犀离线构建知识，日常使用并不方便。<a href="https://github.com/spine-se-lab/Lingxi-advisor" target="_blank" rel="noopener">Lingxi Advisor</a>
+          是基于同一思路的独立插件，把过程性知识带进日常使用的 coding agent。支持
+          <a href="https://github.com/openJiuwen-ai/iCode" target="_blank" rel="noopener">iCode</a> 和 OpenCode。</p></div>
+      <div class="mode"><b>Runtime<span>使用</span></b><p>agent 拿不准时，检索为这个代码仓准备好的过程性知识并加以应用，同时给出来源。</p></div>
+      <div class="mode"><b>Prepare<span>挖掘</span></b><p>从历史 issue 及其补丁中提炼过程性知识，可以逐个处理，也可以批量处理。</p></div>
+    </div>
+    <p class="disc reveal"><b>说明。</b>Lingxi Advisor 是相关插件，不是本文的复现：它和论文共享核心思路，即为 coding agent 提供过程性知识，但流程是它自己的，<b>不是论文中评测的系统</b>。本页所有数字都来自论文的研究实现，杰出论文奖属于论文本身。安装方式和支持的平台见<a href="https://github.com/spine-se-lab/Lingxi-advisor" target="_blank" rel="noopener">插件 README</a>。</p>
+  </section>
+
+  <!-- ===================================================================== 06 CITE -->
+  <section class="wrap section" id="cite">
+    <div class="shead reveal">
+      <div><div class="kicker">06 · 引用</div>
+      <h2>引用本文。</h2></div>
+      <div class="prose"><p>灵犀发表于 ISSTA 2026，并获杰出论文奖。如果用到本文，请引用：</p></div>
+    </div>
+    <div class="bib reveal">
+      <button class="copy-btn" type="button" onclick="copyBibtex(this)" aria-label="复制 BibTeX">复制</button><span id="copy-status" class="sr-only" role="status" aria-live="polite"></span>
+      <pre><code>@inproceedings{yang2026lingxi,
+  title     = {Lingxi: Repository-Level Issue Resolution Framework
+               Enhanced by Procedural Knowledge Guided Scaling},
+  author    = {Yang, Xu and Zhou, Jiayuan and Pacheco, Michael and
+               Zhu, Wenhan and He, Pengfei and Wang, Shaowei and
+               Liu, Kui and Pan, Ruiqi},
+  booktitle = {Proceedings of the ACM SIGSOFT International Symposium
+               on Software Testing and Analysis (ISSTA)},
+  year      = {2026},
+  note      = {Distinguished Paper Award. Preprint: arXiv:2510.11838}
+}</code></pre>
+    </div>
+  </section>
+  </main>
+
+  <footer class="wrap footer">
+    <div><b>Lingxi <span class="han" lang="zh-Hans">灵犀</span></b> · Xu Yang, Jiayuan Zhou, Michael Pacheco, Wenhan Zhu, Pengfei He, Shaowei Wang,
+      Kui Liu, Ruiqi Pan · University of Manitoba 与华为。
+      <div class="links"><a href="https://arxiv.org/abs/2510.11838" target="_blank" rel="noopener">arXiv:2510.11838</a>
+        <a href="https://conf.researchr.org/details/issta-2026/issta-2026-research-papers/179/Lingxi-Repository-Level-Issue-Resolution-Framework-Enhanced-by-Procedural-Knowledge-" target="_blank" rel="noopener">ISSTA 2026</a>
+        <a href="#cite">BibTeX</a></div></div>
+    <div>“灵犀”取自“心有灵犀一点通”：一线相连，彼此相通。在这里，它把过去问题的解决方式和新的 issue 连在一起。<br><br>联系人：Jiayuan Zhou · <a href="mailto:jiayuan.zjy@gmail.com">jiayuan.zjy@gmail.com</a></div>
+  </footer>
+
+  <script>
+    (function () {
+      const navbar = document.getElementById("navbar");
+      const onScroll = () => navbar.classList.toggle("scrolled", window.scrollY > 30);
+      onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+      const nodes = Array.from(document.querySelectorAll(".reveal"));
+      if ("IntersectionObserver" in window) {
+        const obs = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } }), { threshold: 0, rootMargin: "0px 0px -6% 0px" });
+        nodes.forEach(n => obs.observe(n));
+      } else nodes.forEach(n => n.classList.add("visible"));
+      const links = Array.from(document.querySelectorAll(".rail ol a[href^='#']"));
+      const targets = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+      const mark = () => {
+        let cur = null; const y = window.scrollY + window.innerHeight * 0.3;
+        targets.forEach(el => { if (el.getBoundingClientRect().top + window.scrollY <= y) cur = el.id; });
+        links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + cur));
+      };
+      mark(); window.addEventListener("scroll", mark, { passive: true });
+      /* language switch keeps the current section */
+      document.querySelectorAll(".lang a").forEach(a => a.addEventListener("click", () => { a.href = a.getAttribute("href").split("#")[0] + location.hash; }));
+      /* Phase 3 connectors: drawn from the measured box centres, so rows can size to their content */
+      const p3 = document.querySelector(".p3");
+      const wire = () => {
+        if (!p3) return; const svg = p3.querySelector(".wire");
+        if (getComputedStyle(svg).display === "none") return;
+        const r = svg.getBoundingClientRect(); if (!r.width) return;
+        const mid = s => { const b = p3.querySelector(s).getBoundingClientRect(); return b.top + b.height / 2 - r.top; };
+        const w = r.width, y1 = mid(".in1"), y2 = mid(".in2"), yp = mid(".plan"), yf = mid(".fix"), c = w / 2;
+        const path = (a, b, col) => `<path d="M0,${a} C${c},${a} ${c},${b} ${w},${b}" fill="none" stroke="${col}" stroke-width="2"/><circle cx="${w}" cy="${b}" r="4" fill="${col}"/>`;
+        svg.setAttribute("viewBox", `0 0 ${w} ${r.height}`);
+        svg.innerHTML = path(y1, yp, "#e2502a") + path(y2, yp, "#2f8f6c") + path(y2, yf, "#2f8f6c");
+      };
+      wire(); window.addEventListener("resize", wire);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(wire);
+    })();
+    function copyBibtex(btn) {
+      const code = btn.closest(".bib").querySelector("code").textContent;
+      const status = document.getElementById("copy-status");
+      const flash = (ok) => { btn.textContent = ok ? "已复制" : "复制失败"; btn.classList.toggle("copied", ok);
+        status.textContent = ok ? "BibTeX 已复制到剪贴板。" : "复制失败，请手动选中文本复制。";
+        setTimeout(() => { btn.textContent = "复制"; btn.classList.remove("copied"); status.textContent = ""; }, 2000); };
+      const fallback = () => { const ta = document.createElement("textarea"); ta.value = code; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+        document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); flash(ok); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(() => flash(true)).catch(fallback); else fallback();
+    }
+  </script>
+</body>
+</html>
