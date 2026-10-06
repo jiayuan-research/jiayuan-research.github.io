@@ -11,7 +11,7 @@ Run from the repo root:  python3 bin/build_beyond_the_paper.py
 import re
 from pathlib import Path
 
-SRC = Path.home() / "WorkSpace/Presentation/ISSTA26-Lingxi/decks/lingxi-issta2026-rev10-iCode-detailed.html"
+SRC = Path.home() / "WorkSpace/Presentation/ISSTA26-Lingxi/decks/lingxi-issta2026-rev15-iCode-detailed.html"
 OUT = Path(__file__).resolve().parent.parent / "blog" / "coding-agent-toolkit"
 SITE = "https://www.jiayuanzhou.com"
 
@@ -43,6 +43,8 @@ ZH = [  # (exact HTML fragment, Chinese replacement); longer fragments first
     ("<b>Parallel analysis</b><span>fan out, then merge findings</span>", "<b>并行分析</b><span>多路展开，再合并发现</span>"),
     ("<b>Headless batch runs</b><span>scripted, repeatable runs</span>", "<b>无界面批量运行</b><span>脚本化、可重复</span>"),
     ("<b>Trajectory analytics</b><span>time, tokens, findings</span>", "<b>轨迹分析</b><span>耗时、token、发现</span>"),
+    ("<b>Your data is yours.</b><span>No tracking · no data collection<br>telemetry off by default</span>",
+     "<b>你的数据归你所有。</b><span>不追踪 · 不收集数据<br>遥测默认关闭</span>"),
     (">Lingxi Advisor · procedural knowledge, mined three ways<", ">Lingxi Advisor · 过程性知识，三种来源<"),
     (">from issue + patch<", ">来自 issue + patch<"),
     (">from trajectories<", ">来自执行轨迹<"),
@@ -149,6 +151,10 @@ body {{ padding: 20px 16px 40px 16px; }}
 .award {{ position: absolute; top: 35px; right: 16px; display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px 4px 7px;
   border: 1.5px solid #B8860B; border-radius: 8px; background: #FFF7E0; color: #8A5E06; font: 700 12px/1.15 var(--font-mono); letter-spacing: -.01em; white-space: nowrap; }}
 .award svg {{ width: 20px; height: 20px; flex: none; color: #C9961A; }}
+/* privacy strip: keep it inside the iCode card (card bottom = 1002, feature grid bottom = 937) */
+.privacy {{ top: 945px !important; padding: 6px 16px; }}
+.privacy b {{ font-size: 22px; }}
+.privacy span {{ font-size: 13px; line-height: 1.25; }}
 .elinks .plug, .elinks .lk {{ height: 44px; min-height: 44px; box-sizing: border-box; }}
 html[lang="zh-Hans"] .slide {{ font-family: var(--font-display), "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif; }}
 html[lang="zh-Hans"] .tag, html[lang="zh-Hans"] .ec .src, html[lang="zh-Hans"] .flowpill, html[lang="zh-Hans"] .egh {{ text-transform: none; letter-spacing: .04em; }}

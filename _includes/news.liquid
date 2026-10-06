@@ -2,10 +2,7 @@
   {% if site.news != blank %}
     {% assign news_size = site.news | size %}
     <div
-      class="table-responsive"
-      {% if include.limit and site.announcements.scrollable and news_size > 3 %}
-        style="max-height: 60vw"
-      {% endif %}
+      class="table-responsive{% if include.limit and site.announcements.scrollable and news_size > 5 %} news-scroll{% endif %}"
     >
       <table class="table table-sm table-borderless">
         {% assign news = site.news | reverse %}
@@ -32,3 +29,19 @@
     <p>No news so far...</p>
   {% endif %}
 </div>
+<script>
+  // Show exactly five news rows at a time; the rest scroll.
+  (function () {
+    function fit() {
+      document.querySelectorAll('.news .news-scroll').forEach(function (box) {
+        var rows = box.querySelectorAll('tr'), h = 0;
+        for (var i = 0; i < Math.min(5, rows.length); i++) h += rows[i].getBoundingClientRect().height;
+        box.style.maxHeight = Math.ceil(h) + 'px';
+        box.style.overflowY = 'auto';
+      });
+    }
+    window.addEventListener('load', fit);
+    window.addEventListener('resize', fit);
+    fit();
+  })();
+</script>

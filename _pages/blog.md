@@ -4,7 +4,7 @@ permalink: /blog/
 title: blog
 description: Project pages for our recent work.
 nav: true
-nav_order: 3
+nav_order: 2
 ---
 
 <style>

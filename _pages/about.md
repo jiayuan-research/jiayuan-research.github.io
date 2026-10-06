@@ -58,14 +58,25 @@ social: false # includes social icons at the bottom of the page
   }
   .post > article > .clearfix > ul ul li { margin: 0.1rem 0; }
   .post > article > .clearfix .src { color: var(--global-text-color-light); }
+  /* Tagline sits beside the name in the page header. */
+  .post-header .name-row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0.4rem 1.6rem; }
+  .post-header .name-row .post-title { margin-bottom: 0; }
+  .post-header .name-tagline {
+    flex: 1 1 22rem; max-width: 34rem; margin: 0 0 0.45rem 0;
+    font-style: italic; font-size: 1rem; line-height: 1.4; color: var(--global-text-color-light);
+    padding-left: 0.8rem; border-left: 3px solid var(--global-divider-color);
+  }
+  .post > article .more { white-space: nowrap; font-size: 0.9em; font-weight: 500; }
+  /* First paragraph of the bio starts level with the top of the photo. */
+  .post > article > .clearfix > p:first-of-type { margin-top: 0; }
+  /* Drop the photo by the line's top leading so its edge meets the cap height of the first line. */
+  @media (min-width: 576px) { .post > article > .profile { margin-top: 6px; } }
 </style>
 
-<p class="tagline">Technical Expert on process intelligence for coding agents and proactive open-source vulnerability management.</p>
+I am a **Technical Expert** at the **Waterloo Research Center, Huawei Canada**. Every software artifact (e.g., commits, issues, agent trajectories) records what was done, but rarely why. My team learns the why and puts it to work:
 
-I am a **Technical Expert** at **Huawei Canada**, leading a team that turns the traces software development leaves behind into systems that act on them:
-
-- **[Process intelligence for coding agents](/research/#lingxi).** We mine historical issues, agent trajectories and test outcomes into constraints and guidance for the next run. [Lingxi](/blog/lingxi/) received an ISSTA'26 *Distinguished Paper* award; our framework reaches **81.2%** (Mar 2026) and **84.2%** with test-time scaling (May 2026) on SWE-bench Verified, higher than every entry on the official leaderboard.
-- **[OSS vulnerability management](/research/#vuln).** **Proactive sensing**: detecting silent fix commits **1–2 weeks before public disclosure**, a window that LLM-built exploits now close in days.
+- **[Process intelligence for coding agents](/research/#lingxi).** We mine historical issues, agent trajectories and test outcomes into constraints and guidance for the next run. Our work [Lingxi](/blog/lingxi/) received an ISSTA'26 *Distinguished Paper* award. <a class="more" href="/research/#lingxi">More details →</a>
+- **[OSS vulnerability management](/research/#vuln).** **Proactive sensing**: detecting silent fix commits **1–2 weeks before public disclosure**, a window that LLM-built exploits now close in days. <a class="more" href="/research/#vuln">More details →</a>
 
 <div class="clear-float"></div>
 
