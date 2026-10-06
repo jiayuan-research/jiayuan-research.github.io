@@ -42,24 +42,36 @@ social: false # includes social icons at the bottom of the page
      synthesis/background paragraphs go full-width under the profile, not in
      a narrow column beside empty space. */
   .post > article > .clearfix > .clear-float { clear: left; height: 0; }
+  /* Keep the two research-line bullets in the text column beside the photo,
+     even where a bullet runs past the bottom of the floated image. */
+  .post > article > .clearfix > ul { overflow: hidden; font-size: 0.95rem; line-height: 1.6; padding-left: 1.2rem; }
+  .post > article > .clearfix > ul > li { margin-bottom: 0.7rem; }
+  .post > article > .clearfix > ul > li > p { margin-bottom: 0.4rem; }
+  /* The three experience sources: a compact, quieter sub-list. */
+  .post > article > .clearfix > ul ul {
+    list-style: none;
+    padding-left: 0.9rem;
+    margin: 0.3rem 0 0.5rem 0;
+    border-left: 2px solid var(--global-divider-color);
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+  .post > article > .clearfix > ul ul li { margin: 0.1rem 0; }
+  .post > article > .clearfix .src { color: var(--global-text-color-light); }
 </style>
 
-<p class="tagline">Principal Researcher on AI agents for software engineering and vulnerability management.</p>
+<p class="tagline">Technical Expert on process intelligence for coding agents and proactive open-source vulnerability management.</p>
 
-I am a **Principal Researcher** at **Huawei Canada**, leading a team across two complementary lines:
+I am a **Technical Expert** at **Huawei Canada**, leading a team that turns the traces software development leaves behind into systems that act on them:
 
-- **[AI agents for software engineering](/research/#lingxi).** Our **[Lingxi](https://github.com/lingxi-agent/Lingxi)** agent framework — **#1 on SWE-bench Verified** — mines knowledge from development data and agent trajectories to guide the agent harness and evolve the underlying models. Deployed across internal product lines at Huawei.
-- **[OSS vulnerability management](/research/#vuln).** We pushed vulnerability defense from reactive CVE response to **proactive sensing** — detecting silent fix commits **1–2 weeks ahead of public disclosure** through large-scale code-change modeling.
+- **[Process intelligence for coding agents](/research/#lingxi).** We mine historical issues, agent trajectories and test outcomes into constraints and guidance for the next run. [Lingxi](/blog/lingxi/) received an ISSTA'26 *Distinguished Paper* award; our framework reaches **81.2%** (Mar 2026) and **84.2%** with test-time scaling (May 2026) on SWE-bench Verified, higher than every entry on the official leaderboard.
+- **[OSS vulnerability management](/research/#vuln).** **Proactive sensing**: detecting silent fix commits **1–2 weeks before public disclosure**, a window that LLM-built exploits now close in days.
 
 <div class="clear-float"></div>
 
-A common thread runs through both: **turning implicit, hard-to-observe signals in software development events into explicit systems that can act on them.**
+I received my Ph.D. in Computer Science from the [SAIL lab](https://sailresearch.github.io/sail-website), Queen's University, under the supervision of [Prof. Ahmed E. Hassan](https://scholar.google.com/citations?user=9hwXx34AAAAJ) and [Prof. Shaowei Wang](https://sites.google.com/view/mambalab). My dissertation studied extrinsic incentives in open source communities through mining GitHub, Stack Overflow, and Bountysource data. Before grad school, I was the founding engineer of 1688's One-Click Dropshipping (一键代销) system at **Alibaba Group** — a full-stack platform connecting B2B suppliers with millions of Taobao/Tmall merchants.
 
-I received my Ph.D. in Computer Science from the [SAIL lab](https://sailresearch.github.io/sail-website), Queen's University, under the supervision of [Prof. Ahmed E. Hassan](https://scholar.google.com/citations?user=9hwXx34AAAAJ) and [Prof. Shaowei Wang](https://sites.google.com/view/mambalab). My dissertation studied extrinsic incentives in open source communities through mining GitHub, Stack Overflow, and Bountysource data. Before grad school, I was the founding engineer of 1688's **One-Click Dropshipping (一件代发/一键代销)** system at **Alibaba Group** — a full-stack platform connecting B2B suppliers with millions of Taobao/Tmall merchants.
+**Research interests:** AI agents for software engineering, experience and procedural knowledge mining, agent trajectory analysis, test-time scaling, agent evaluation, vulnerability detection and management, mining software repositories.
 
-See [Research Highlights](/research/) for a deeper look at these research lines.
-
-**Research interests:** AI agents for software engineering, procedural knowledge mining, agent memory, development-process knowledge, LLM-based code generation, vulnerability detection and management, mining software repositories.
-
-**Publications:** 22 papers at **ICSE**, **FSE**, **ASE**, **ISSTA**, **IEEE TSE**, **ACM TOSEM**, and **EMSE** — see [google scholar](https://scholar.google.com/citations?hl=zh-CN&user=ySQkd5nCb0cC). I hold **12 patents** in software engineering and AI applications.
+**Publications:** papers at **ICSE**, **FSE**, **ASE**, **ISSTA**, **IEEE TSE**, **ACM TOSEM**, and **EMSE** — see [publications](/publications/) and [google scholar](https://scholar.google.com/citations?hl=zh-CN&user=ySQkd5nCb0cC). I hold **12 patents** in software engineering and AI applications.
 

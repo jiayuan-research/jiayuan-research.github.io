@@ -5,5 +5,4 @@ inline: true
 related_posts: false
 ---
 
-🎉Our developer-experience guided agent solution ([Lingxi](https://github.com/nimasteryang/Lingxi)) achieved **74.6%** with *Claude 4* on SWE-bench-verified, ranking **#2**!🚀
-
+🎉 Our developer-experience guided agent solution ([Lingxi](/blog/lingxi/)) achieved **74.6%** with *Claude 4* on SWE-bench Verified, ranking **#2**! 🚀

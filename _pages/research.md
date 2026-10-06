@@ -364,6 +364,77 @@ nav_order: 1
     margin-top: 0.2rem;
   }
 
+  /* Redrawn disclosure-timeline figure (vulnerability tab) */
+  .vuln-hero { max-width: 900px; }
+  .vuln-hero svg.vl { display: block; width: 100%; height: auto; }
+  .vl { --vl-box-bg: #f7fafd; --vl-stroke: #9ab4cc; --vl-red: #c0392b; --vl-ours: #e06b2a; --vl-grey: #8a97a6; }
+  html[data-theme="dark"] .vl { --vl-box-bg: rgba(255,255,255,0.04); --vl-stroke: #5d7891; --vl-red: #e06a5c; --vl-grey: #9aa5b1; }
+  .vl .vl-box { fill: #f7fafd; stroke: var(--vl-stroke); stroke-width: 1.3; }
+  html[data-theme="dark"] .vl .vl-box { fill: #2a2f36; }
+  .vl .vl-key { stroke: var(--vl-red); stroke-width: 2.4; }
+  .vl .vl-red { stroke: var(--vl-red); fill: #fdf1ef; }
+  html[data-theme="dark"] .vl .vl-red { fill: #3a2624; }
+  .vl .vl-ours { stroke: var(--vl-ours); stroke-width: 2.2; fill: #fdf0e6; }
+  html[data-theme="dark"] .vl .vl-ours { fill: #3a2b1f; }
+  .vl .vl-grey { stroke: var(--vl-grey); stroke-dasharray: 5 4; fill: none; }
+  .vl .vl-window { fill: rgba(192, 57, 43, 0.06); stroke: rgba(192, 57, 43, 0.35); stroke-dasharray: 6 5; }
+  .vl .vl-t { fill: var(--global-text-color); font-size: 16px; font-weight: 700; }
+  .vl .vl-t-grey { fill: var(--global-text-color-light); }
+  .vl .vl-s { fill: var(--global-text-color-light); font-size: 13.5px; font-style: italic; }
+  .vl .vl-s-dark { fill: var(--global-text-color); }
+  .vl .vl-exposed { stroke: var(--vl-red); stroke-width: 2; fill: #f9e1dd; }
+  html[data-theme="dark"] .vl .vl-exposed { fill: #45231f; }
+  .vl .vl-t-exposed { fill: var(--vl-red); }
+  .vl .vl-divider { stroke: var(--global-divider-color); stroke-width: 1.2; }
+  .vl .vl-track { fill: var(--global-text-color); font-size: 14px; font-weight: 700; }
+  .vl .vl-track-ours { fill: var(--vl-ours); }
+  .vl .vl-track-s { fill: var(--global-text-color-light); font-size: 12.5px; font-style: italic; }
+  .vl .vl-safe { stroke: #2e8b57; stroke-width: 2; fill: #e6f3eb; }
+  html[data-theme="dark"] .vl .vl-safe { fill: #1e3527; }
+  .vl .vl-t-safe { fill: #2e8b57; }
+  html[data-theme="dark"] .vl .vl-t-safe { fill: #5cc28a; }
+  .vl .vl-t-safe-s { fill: #2e8b57; font-size: 13px; font-style: italic; font-weight: 600; }
+  .vl .vl-block { stroke: #2e8b57; stroke-width: 3; fill: none; }
+  .vl .vl-ax-t { fill: var(--global-text-color); font-size: 13.5px; }
+  .vl .vl-s-red { fill: var(--vl-red); font-weight: 600; }
+  .vl .vl-s-ours { fill: var(--vl-ours); font-weight: 600; }
+  .vl .vl-lane { fill: var(--global-text-color); font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .vl .vl-t-window { fill: var(--vl-red); font-size: 15px; font-style: italic; font-weight: 600; }
+  .vl .vl-t-red { fill: var(--vl-red); font-size: 13.5px; font-style: italic; font-weight: 600; }
+  .vl-stack { display: none; text-align: left; font-size: 0.92rem; padding-left: 1.2rem; }
+  .vl-stack li { margin-bottom: 0.35rem; }
+  @media (max-width: 700px) { .vuln-hero svg.vl { display: none; } .vl-stack { display: block; } }
+  .vl .vl-l-up { stroke: #7da0c4; stroke-width: 2; fill: none; }
+  .vl .vl-l-red { stroke: var(--vl-red); stroke-width: 2; fill: none; }
+  .vl .vl-l-ours { stroke: var(--vl-ours); stroke-width: 2.2; fill: none; }
+  .vl .vl-l-grey { stroke: var(--vl-grey); stroke-width: 1.8; fill: none; }
+  .vl .vl-axis { stroke: var(--vl-grey); stroke-width: 1.4; fill: none; }
+  .vl .vl-h-up { fill: #7da0c4; }
+  .vl .vl-h-red { fill: var(--vl-red); }
+  .vl .vl-h-ours { fill: var(--vl-ours); }
+  .vl .vl-h-grey { fill: var(--vl-grey); }
+
+  /* Recent-incident callout in the vulnerability tab */
+  .vuln-case {
+    max-width: 760px;
+    margin: 0 auto 1.6rem auto;
+    padding: 0.9rem 1.2rem;
+    border-left: 4px solid #e06b2a;
+    background: rgba(224, 107, 42, 0.07);
+    border-radius: 0 6px 6px 0;
+  }
+  .vuln-case .case-tag {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #c0561c;
+    margin-bottom: 0.3rem;
+  }
+  .vuln-case p { margin: 0; line-height: 1.6; font-size: 0.95rem; color: var(--global-text-color); }
+  .vuln-case .case-key { font-weight: 700; background: rgba(224, 107, 42, 0.16); padding: 0 0.15rem; }
+
   /* Mobile fallback: collapse to single column, drop all connectors */
   @media (max-width: 780px) {
     .subs-row.cols-4, .subs-row.cols-3 { grid-template-columns: 1fr; }
@@ -376,6 +447,202 @@ nav_order: 1
     .tabs-nav { flex-direction: column; }
     .tab-btn { text-align: left; }
   }
+
+  /* ============================================
+     Process-intelligence diagram (agent tab): four blocks, fast + slow loop
+     ============================================ */
+  .pi-diagram {
+    --pi-box-bg: #f7fafd;
+    --pi-stroke: #9ab4cc;
+    --pi-top-stroke: #7da0c4;
+    --pi-slow: #e06b2a;
+    --pi-fast: #1f5eb3;
+    max-width: 900px;
+    margin: 1.6rem auto 0.4rem auto;
+  }
+  html[data-theme="dark"] .pi-diagram {
+    --pi-box-bg: rgba(255, 255, 255, 0.04);
+    --pi-stroke: #5d7891;
+    --pi-fast: #6aa7e8;
+  }
+  .pi-diagram svg { display: block; width: 100%; height: auto; }
+  .pi-diagram svg.pi-full { display: none; }
+  .pi-diagram.open svg.pi-full { display: block; }
+  .pi-diagram.open svg.pi-brief { display: none; }
+  .pi-diagram .box { fill: var(--pi-box-bg); stroke: var(--pi-stroke); stroke-width: 1.2; }
+  .pi-diagram .box.top { stroke: var(--pi-top-stroke); stroke-width: 3; }
+  .pi-diagram .box.wip { stroke-dasharray: 5 4; }
+  .pi-diagram .t-title { fill: var(--global-text-color); font-size: 16px; font-weight: 700; }
+  .pi-diagram .t-body { fill: var(--global-text-color); font-size: 13.5px; }
+  .pi-diagram .t-label { fill: var(--global-text-color-light); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .pi-diagram .t-muted { fill: var(--global-text-color-light); font-size: 12.5px; font-style: italic; }
+  .pi-diagram .t-slow { fill: var(--pi-slow); font-size: 12.5px; font-style: italic; }
+  .pi-diagram .t-fast { fill: var(--pi-fast); font-size: 12.5px; font-style: italic; }
+  .pi-diagram a .t-link { fill: var(--global-theme-color); font-weight: 600; }
+  .pi-diagram a:hover .t-link { text-decoration: underline; }
+  .pi-diagram .l-slow { stroke: var(--pi-slow); stroke-width: 2.2; fill: none; }
+  .pi-diagram .l-fast { stroke: var(--pi-fast); stroke-width: 1.8; fill: none; }
+  .pi-diagram .h-slow { fill: var(--pi-slow); }
+  .pi-diagram .h-fast { fill: var(--pi-fast); }
+  .pi-diagram .t-proj { fill: #1f5eb3; font-size: 13.5px; font-weight: 600; }
+  html[data-theme="dark"] .pi-diagram .t-proj { fill: #6aa7e8; }
+  .pi-diagram a:hover .t-proj { text-decoration: underline; }
+  .pi-diagram .t-sub { fill: #5b6775; font-size: 12px; font-style: italic; }
+  html[data-theme="dark"] .pi-diagram .t-sub { fill: #a7b4c2; }
+  .pi-diagram .evo { fill: none; stroke: var(--pi-top-stroke); stroke-width: 2; }
+  .pi-diagram .t-evo { fill: var(--global-text-color); font-size: 13.5px; font-weight: 700; }
+  .pi-diagram .l-cycle { stroke: var(--pi-slow); stroke-width: 2.2; fill: none; }
+  .pi-diagram .t-proj-na { fill: var(--global-text-color); font-size: 13.5px; font-weight: 600; }
+  .pi-diagram .t-grey, .pi-diagram tspan.t-grey { fill: #9aa5b1; }
+  .pi-diagram .t-label-mid { fill: var(--pi-fast); font-size: 13px; font-style: italic; }
+  .pi-stack .pi-evo { border: 2px solid #7da0c4; }
+  .pi-stack .pi-evo > b { margin-bottom: 0.4rem; }
+  .pi-stack { display: none; max-width: 760px; margin: 1.2rem auto 0 auto; }
+  .pi-stack .pi-node {
+    border: 1px solid var(--global-divider-color);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+  .pi-stack .pi-node b { display: block; color: var(--global-text-color); }
+  .pi-stack .pi-node span { font-size: 0.9rem; color: var(--global-text-color-light); }
+  .pi-stack .pi-loop { font-size: 0.88rem; font-style: italic; color: #e06b2a; margin: 0.2rem 0 0.6rem 0; }
+
+  /* ============================================
+     Process-intelligence map (agent tab), HTML version
+     ============================================ */
+  .pm { --pm-orange: #e06b2a; --pm-blue: #1f5eb3; max-width: 820px; margin: 1.4rem auto 0 auto; }
+  html[data-theme="dark"] .pm { --pm-blue: #6aa7e8; }
+  .pm-top { display: flex; justify-content: center; }
+  .pm-agent {
+    width: 76%;
+    border: 3px solid #7da0c4;
+    border-radius: 8px;
+    background: #f7fafd;
+    text-align: center;
+    padding: 0.4rem 1rem;
+  }
+  .pm-agent b { display: block; color: #1c2e4a; font-size: 0.98rem; }
+  .pm-detail { display: none; }
+  .pm-mobile-note { display: none; margin: 0 0 0.8rem 0; font-size: 0.84rem; color: #5b6775; text-align: center; }
+  .pm-mobile-note span { white-space: nowrap; }
+  .pm-agent .pm-detail { font-size: 0.9rem; margin-top: 0.1rem; }
+
+  /* connector band between the agent and the two blocks; same columns as the row below */
+  .pm-mid, .pm-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1.3fr); }
+  .pm-mid { height: 118px; }
+  .pm-col { position: relative; display: flex; }
+  .pm-col-left { justify-content: center; }
+  .pm-col-right { display: block; }
+  .pm-guide-stack { position: absolute; left: 34%; top: 0; bottom: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+  .pm-guide-stack .pm-seg { height: auto; flex: none; }
+  .pm-guide-stack .pm-seg:first-child { height: 34px; }
+  .pm-guide-stack .pm-seg:last-child { flex: 1; }
+  .pm-pull { position: absolute; left: 68%; top: 0; bottom: 0; display: flex; }
+  .pm-seg { position: relative; width: 2px; height: 100%; }
+  .pm-orange { background: var(--pm-orange); }
+  .pm-blue { background: var(--pm-blue); }
+  .pm-seg::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent; }
+  .pm-down::after { bottom: -1px; border-top: 8px solid; }
+  .pm-up::after { top: -1px; border-bottom: 8px solid; }
+  .pm-orange.pm-down::after { border-top-color: var(--pm-orange); }
+  .pm-blue.pm-down::after { border-top-color: var(--pm-blue); }
+  .pm-blue.pm-up::after { border-bottom-color: var(--pm-blue); }
+  .pm-lab { position: absolute; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: 0.8rem; font-style: italic; }
+  .pm-lab-left { right: 9px; }
+  .pm-lab-right { left: 9px; }
+  .pm-orange .pm-lab { color: var(--pm-orange); }
+  .pm-blue .pm-lab { color: var(--pm-blue); }
+  .pm-guide {
+    border: 1px dashed #9ab4cc; border-radius: 6px; background: var(--global-bg-color);
+    text-align: center; padding: 0.3rem 0.9rem 0.35rem 0.9rem; white-space: nowrap;
+  }
+  .pm-guide b { display: block; font-size: 0.86rem; color: var(--global-text-color); line-height: 1.3; }
+  .pm-guide span { display: block; font-size: 0.74rem; font-style: italic; color: var(--global-text-color-light); line-height: 1.3; }
+
+  /* the two blocks and the evolution loop between them */
+  .pm-box::before, .pm-box::after { display: none; }
+  .pm-box { margin: 0; padding: 0.6rem 0.9rem 0.65rem 0.9rem; }
+  .pm-summary { margin: 0.35rem 0 0 0; padding-left: 1.05rem; font-size: 0.84rem; color: #5b6775; line-height: 1.55; list-style: disc; }
+  html[data-theme="dark"] .pm-summary { color: #a7b4c2; }
+  .pm-box > b { font-size: 0.98rem; }
+  .pm-eg { display: inline-block; white-space: nowrap; font-weight: 400; font-style: italic; color: #5b6775; font-size: 0.78rem; margin-left: 0.3rem; }
+  .pm-list { list-style: none; padding: 0; margin: 0.45rem 0 0 0; font-size: 0.86rem; line-height: 1.45; }
+  .pm-list li { margin: 0 0 0.5rem 0; }
+  .pm-list li:last-child { margin-bottom: 0; }
+  .pm-list .proj, .pm-list .proj-na { display: block; }
+  .pm-two { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.2rem; row-gap: 0.55rem; align-items: start; }
+  .pm-two li { margin: 0; }
+  .pm-loop { display: flex; flex-direction: column; justify-content: space-evenly; padding: 10px 8px; min-height: 128px; }
+  .pm-h { position: relative; height: 2px; background: var(--pm-orange); margin-top: 15px; }
+  .pm-h span { position: absolute; left: 0; right: 0; top: -17px; text-align: center; font-size: 0.76rem; font-style: italic; color: var(--pm-orange); line-height: 1; }
+  .pm-h::after { content: ''; position: absolute; top: -4px; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+  .pm-left span { top: 6px; }
+  .pm-left { margin-top: 0; margin-bottom: 15px; }
+  .pm-right::after { right: -1px; border-left: 8px solid var(--pm-orange); }
+  .pm-left::after { left: -1px; border-right: 8px solid var(--pm-orange); }
+  .pm-evo { display: flex; flex-direction: column; align-items: center; }
+  .pm-evo svg { width: 34px; height: 34px; flex: none; }
+  .pm-evo b { font-size: 0.8rem; color: var(--global-text-color); white-space: nowrap; line-height: 1.1; }
+  @media (max-width: 780px) {
+    .pm-mid { display: none; }
+    .pm-agent { width: 100%; margin-bottom: 0.8rem; }
+    .pm-row { grid-template-columns: 1fr; }
+    .pm-loop { padding: 0.5rem 0; min-height: auto; }
+    .pm-mobile-note { display: block; }
+    .pm-h { display: none; }
+    .pm-two { grid-template-columns: 1fr; }
+  }
+
+  /* Project cards under the diagram */
+  .pi-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    column-gap: 1rem;
+    row-gap: 0;
+    max-width: 980px;
+    margin: 1.8rem auto 0 auto;
+  }
+  .pi-card {
+    border: 1px solid var(--global-divider-color);
+    border-radius: 8px;
+    padding: 0.9rem 1rem 1rem 1rem;
+    background: var(--global-card-bg-color);
+    /* Each card spans the same seven rows, so label, title, venue, summary,
+       number, setting and links line up across the three cards. */
+    display: grid;
+    grid-row: span 7;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    margin-bottom: 1rem;
+  }
+  .pi-card .src {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--global-text-color-light);
+  }
+  .pi-card h3 { font-size: 1.1rem; margin: 0.3rem 0 0.1rem 0; }
+  .pi-card .venue { font-size: 0.82rem; color: var(--global-text-color-light); margin-bottom: 0.5rem; }
+  .pi-card p { font-size: 0.92rem; line-height: 1.5; margin: 0 0 0.7rem 0; }
+  .pi-card .num { font-size: 1.5rem; font-weight: 700; color: var(--global-theme-color); line-height: 1.1; }
+  .pi-card .num-sub { font-size: 0.8rem; color: var(--global-text-color-light); margin-bottom: 0.7rem; }
+  .pi-card .links { align-self: end; font-size: 0.9rem; }
+  .pi-card .links a { display: block; font-weight: 600; margin-top: 0.15rem; }
+  .pi-note {
+    max-width: 760px;
+    margin: 1.2rem auto 0 auto;
+    font-size: 0.85rem;
+    color: var(--global-text-color-light);
+    text-align: center;
+  }
+  @media (max-width: 700px) {
+    .pi-diagram { display: none; }
+    .pi-stack { display: block; }
+    .pi-cards { grid-template-columns: 1fr; }
+  }
 </style>
 
 <!-- ================================================================== -->
@@ -384,23 +651,129 @@ nav_order: 1
 
 <div class="research-tabs">
   <div class="tabs-nav">
-    <button class="tab-btn active" data-tab="vuln" type="button">OSS Vulnerability Management</button>
-    <button class="tab-btn" data-tab="lingxi" type="button">AI Agents for Software Engineering</button>
+    <button class="tab-btn active" data-tab="lingxi" type="button">Process Intelligence for Coding Agents</button>
+    <button class="tab-btn" data-tab="vuln" type="button">OSS Vulnerability Management</button>
   </div>
 
 <!-- ================================================================== -->
 <!-- Tab 1: OSS Vulnerability Management                                  -->
 <!-- ================================================================== -->
 
-<div class="tab-panel active" id="tab-vuln">
+<div class="tab-panel" id="tab-vuln">
 
 <figure class="vuln-hero">
-  <img src="/assets/img/VulnDisclosureLifecycle.png" alt="Conventional vs. proposed pre-emptive vulnerability patch cycles" />
-  <figcaption><strong>My research focus:</strong> close the pre-disclosure window — act before the attacker.<span class="img-credit">Diagram generated with Gemini.</span></figcaption>
+  <svg class="vl" viewBox="0 0 1070 486" role="img" aria-label="Disclosure timeline, top to bottom. Upstream: a vulnerability is discovered and confirmed in private, fixed in a public commit that is not labeled as a security fix, the patch is released, and only later is an advisory and CVE published. Attacker: reads the public commit, infers the vulnerability and builds an exploit, LLM-assisted, in days. Downstream users on two tracks. Today, they get no signal until the advisory, stay exposed through the window, and patch weeks to months later. With proactive sensing, the silent fix is flagged early and users patch one to two weeks before the CVE, so the attack is blocked.">
+    <defs>
+      <marker id="vl-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="vl-h-up"/></marker>
+      <marker id="vl-ah-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="vl-h-red"/></marker>
+      <marker id="vl-ah-ours" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="vl-h-ours"/></marker>
+      <marker id="vl-ah-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="vl-h-grey"/></marker>
+    </defs>
+
+    <!-- Exposure window: from the public fix until the advisory is out -->
+    <rect class="vl-window" x="278" y="22" width="594" height="400" rx="6"/>
+    <text class="vl-t-window" x="575" y="44" text-anchor="middle">Exposure window: the fix is public, the advisory is not</text>
+
+    <!-- Upstream -->
+    <text class="vl-lane" x="16" y="83">Upstream</text>
+    <text class="vl-lane" x="16" y="100">project</text>
+    <rect class="vl-box" x="104" y="60" width="166" height="54" rx="7"/>
+    <text class="vl-t" x="187" y="83" text-anchor="middle">Discover &amp; confirm</text>
+    <text class="vl-s" x="187" y="102" text-anchor="middle">in private</text>
+    <line class="vl-l-up" x1="270" y1="87" x2="288" y2="87" marker-end="url(#vl-ah)"/>
+
+    <rect class="vl-box vl-key" x="290" y="60" width="170" height="54" rx="7"/>
+    <text class="vl-t" x="375" y="83" text-anchor="middle">Fix committed</text>
+    <text class="vl-s vl-s-red" x="375" y="102" text-anchor="middle">public, not labeled</text>
+    <line class="vl-l-up" x1="460" y1="87" x2="528" y2="87" marker-end="url(#vl-ah)"/>
+
+    <rect class="vl-box" x="530" y="60" width="150" height="54" rx="7"/>
+    <text class="vl-t" x="605" y="83" text-anchor="middle">Patch released</text>
+    <text class="vl-s" x="605" y="102" text-anchor="middle">next version</text>
+    <line class="vl-l-up" x1="680" y1="87" x2="698" y2="87" marker-end="url(#vl-ah)"/>
+
+    <rect class="vl-box" x="700" y="60" width="166" height="54" rx="7"/>
+    <text class="vl-t" x="783" y="83" text-anchor="middle">Advisory &amp; CVE</text>
+    <text class="vl-s" x="783" y="102" text-anchor="middle">NVD, GitHub advisories</text>
+
+    <!-- Attacker, between upstream and downstream -->
+    <line class="vl-divider" x1="16" y1="133" x2="1052" y2="133"/>
+    <text class="vl-lane" x="16" y="180">Attacker</text>
+    <line class="vl-l-red" x1="395" y1="114" x2="395" y2="152" marker-end="url(#vl-ah-red)" style="stroke-dasharray:5 4"/>
+    <rect class="vl-box vl-red" x="310" y="154" width="170" height="50" rx="7"/>
+    <text class="vl-t" x="395" y="176" text-anchor="middle">Reads the commit</text>
+    <text class="vl-s" x="395" y="194" text-anchor="middle">infers the vulnerability</text>
+    <line class="vl-l-red" x1="480" y1="179" x2="503" y2="179" marker-end="url(#vl-ah-red)"/>
+    <rect class="vl-box vl-red" x="505" y="154" width="170" height="50" rx="7"/>
+    <text class="vl-t" x="590" y="176" text-anchor="middle">Builds an exploit</text>
+    <text class="vl-s" x="590" y="194" text-anchor="middle">LLM-assisted, in days</text>
+
+    <!-- Downstream users: two tracks for the same moment in time -->
+    <line class="vl-divider" x1="16" y1="230" x2="1052" y2="230"/>
+    <text class="vl-lane" x="16" y="252">Downstream users</text>
+
+    <!-- Track 1: today -->
+    <text class="vl-track" x="256" y="290" text-anchor="end">Today</text>
+    <text class="vl-track-s" x="256" y="307" text-anchor="end">wait for the advisory</text>
+    <rect class="vl-box vl-exposed" x="310" y="272" width="556" height="48" rx="7"/>
+    <text class="vl-t vl-t-exposed" x="588" y="293" text-anchor="middle">Exposed, with no signal</text>
+    <text class="vl-s vl-s-dark" x="588" y="311" text-anchor="middle">running the vulnerable version</text>
+    <path class="vl-l-grey" d="M 866 87 L 972 87 L 972 270" marker-end="url(#vl-ah-grey)"/>
+    <text class="vl-s vl-s-dark" x="980" y="160">conventional</text>
+    <text class="vl-s vl-s-dark" x="980" y="177">response</text>
+    <rect class="vl-box" x="892" y="272" width="160" height="48" rx="7"/>
+    <text class="vl-t" x="972" y="293" text-anchor="middle">Patch after CVE</text>
+    <text class="vl-s vl-s-dark" x="972" y="311" text-anchor="middle">weeks to months later</text>
+
+    <!-- Attack: from the exploit straight down onto today's users -->
+    <line class="vl-l-red" x1="590" y1="204" x2="590" y2="270" marker-end="url(#vl-ah-red)"/>
+    <text class="vl-t-red" x="598" y="246">attack</text>
+
+    <!-- Track 2: with proactive sensing (our work) -->
+    <text class="vl-track vl-track-ours" x="256" y="382" text-anchor="end">With proactive sensing</text>
+    <text class="vl-track vl-track-ours" x="256" y="399" text-anchor="end">(our work)</text>
+    <line class="vl-l-ours" x1="298" y1="114" x2="298" y2="364" marker-end="url(#vl-ah-ours)"/>
+    <rect class="vl-box vl-ours" x="290" y="366" width="160" height="48" rx="7"/>
+    <text class="vl-t" x="370" y="387" text-anchor="middle">Silent fix flagged</text>
+    <text class="vl-s vl-s-dark" x="370" y="405" text-anchor="middle">by proactive sensing</text>
+    <line class="vl-l-ours" x1="450" y1="390" x2="472" y2="390" marker-end="url(#vl-ah-ours)"/>
+    <rect class="vl-box vl-safe" x="474" y="366" width="578" height="48" rx="7"/>
+    <text class="vl-t vl-t-safe" x="763" y="387" text-anchor="middle">Patched, 1–2 weeks before the CVE</text>
+    <text class="vl-s vl-s-dark" x="763" y="405" text-anchor="middle">protected while others are still exposed</text>
+
+    <!-- The same attack is blocked on the protected track -->
+    <line class="vl-l-red" x1="590" y1="320" x2="590" y2="334" style="stroke-dasharray:4 3"/>
+    <path class="vl-block" d="M 584 337 L 596 349 M 596 337 L 584 349"/>
+    <text class="vl-t-safe-s" x="604" y="348">blocked</text>
+
+    <!-- Time axis -->
+    <line class="vl-axis" x1="16" y1="446" x2="1056" y2="446" marker-end="url(#vl-ah-grey)"/>
+    <line class="vl-axis" x1="290" y1="440" x2="290" y2="452"/>
+    <line class="vl-axis" x1="866" y1="440" x2="866" y2="452"/>
+    <text class="vl-ax-t" x="290" y="470" text-anchor="middle">fix is public</text>
+    <text class="vl-ax-t" x="866" y="470" text-anchor="middle">advisory &amp; CVE published</text>
+    <text class="vl-ax-t" x="1056" y="470" text-anchor="end">time</text>
+  </svg>
+  <ol class="vl-stack">
+    <li><b>Fix committed in public, not labeled as a security fix.</b> The exposure window opens.</li>
+    <li><b>Attacker</b> reads the commit, infers the vulnerability and builds an exploit, LLM-assisted, in days.</li>
+    <li><b>Today</b>, downstream users get no signal, stay exposed until the advisory, and patch weeks to months later.</li>
+    <li><b>With proactive sensing (our work)</b>, the silent fix is flagged and users patch 1–2 weeks before the CVE, so the attack is blocked.</li>
+  </ol>
+  <figcaption><strong>My research focus:</strong> close the pre-disclosure window and act before the attacker.</figcaption>
 </figure>
 
 <p class="page-narrative">
-  Under coordinated vulnerability disclosure, a vulnerability is typically <em>silently fixed</em> on the public repository weeks before its CVE is published &mdash; and attackers can infer the vulnerability from those silent commits long before defenders hear about it. In the <strong>CVE-2018-11776</strong> Apache Struts remote-code-execution case, a silent fix sat in the public repo for about <strong>two months</strong> before public disclosure; this is the same class of exposure window that contributed to the 2017 <strong>Equifax breach</strong> (~147.9M records). Starting from our ASE'21 <em>VulFixMiner</em> paper, our research line has pioneered <strong>proactive vulnerability sensing</strong> &mdash; modeling silent fix commits as the first public, inevitable signal of a hidden vulnerability, covering <strong>65%</strong> of silent fixes <strong>1&ndash;2 weeks</strong> ahead of CVE disclosure.
+  Under coordinated vulnerability disclosure, a vulnerability is usually <em>silently fixed</em> in the public repository before any advisory exists. Until the CVE appears, that commit is the only public trace of the hole, and attackers read commits too.
+</p>
+
+<div class="vuln-case">
+  <span class="case-tag">Case · July 2026 · silently fixed, publicly exploited</span>
+  <p>Researchers reached <strong>OpenAI's internal repositories in under 72 hours</strong>. The entry point was a heap overflow in <strong>libheif</strong>, an open-source image decoder behind OpenAI's community forum, chained with an SSO misconfiguration. Upstream had already fixed the bug, <span class="case-key">but the fix was never labeled a security fix and never received a CVE</span>, so it slipped past Debian's security backports and the vulnerable version kept shipping downstream. LLMs helped turn the bug into a working exploit; the whole campaign cost <strong>under $3,000 in tokens</strong>. <a href="https://www.hacktron.ai/blog/hacking-openai" target="_blank" rel="noopener">Read the write-up&nbsp;&#8599;</a></p>
+</div>
+
+<p class="page-narrative">
+  This is the window our work targets: the fix is public, the vulnerability is not. Starting from our ASE'21 <em>VulFixMiner</em> paper, we pioneered <strong>proactive vulnerability sensing</strong>, treating silent fix commits as the first public signal of a hidden vulnerability and flagging <strong>65%</strong> of them <strong>1&ndash;2 weeks</strong> ahead of CVE disclosure. In 2025, <em>LLM4VFD</em> (FSE'25) brought LLMs together with code-change intention, development artifacts and historical vulnerabilities, raising F1 by <strong>68&ndash;145%</strong> over the best prior detector. We now also work out which downstream versions a fix still leaves exposed.
 </p>
 
 <div class="research-area" id="vuln-area">
@@ -510,8 +883,16 @@ nav_order: 1
       <b>Fix &amp; Validation</b>
       <ul class="content">
         <li>
+          <a class="proj" href="/publications/#chen2026crossver">[Exploit-Applicability]</a>
+          <span class="proj-sub">which versions a disclosed exploit still reaches</span>
+        </li>
+        <li>
           <a class="proj" href="/publications/#chen2026diffploit">[Diffploit]</a>
           <span class="proj-sub">cross-version exploit migration</span>
+        </li>
+        <li>
+          <a class="proj" href="https://arxiv.org/abs/2607.01760" target="_blank" rel="noopener">[Refploit]</a><span class="tag-soon">preprint</span>
+          <span class="proj-sub">exploit construction via code-agent trajectory repair</span>
         </li>
         <li>
           <a class="proj" href="/publications/#pan2026mip">[PatchPort]</a>
@@ -540,87 +921,138 @@ nav_order: 1
 <!-- Tab 2: AI Agents for Software Engineering                            -->
 <!-- ================================================================== -->
 
-<div class="tab-panel" id="tab-lingxi">
+<div class="tab-panel active" id="tab-lingxi">
 
 <p class="page-narrative">
-  A software-engineering agent is only as good as the <em>procedural knowledge</em> it can bring to bear &mdash; how this repository is structured, how its tests fail, how past developers navigated change. Our <strong>Lingxi</strong> agent framework mines that knowledge from historical development data and from its own trajectories, guiding the agent harness and feeding back into the underlying model. <strong>#1 on SWE-bench Verified (81.2%)</strong>, deployed across Huawei's internal product lines.
+  A coding agent starts every task from scratch, yet past development and past runs already hold much of what it needs. We work on <strong>process intelligence for coding agents</strong>: mining that past into constraints and guidance, delivering them to the agent before and during a run, and letting every run's trajectory refine them for the next. Across runs, experience is mined, evaluated and evolved; within a run, guidance steps in when the agent drifts.
 </p>
 
 <div class="research-area" id="lingxi-area">
 
   <div class="main-box">
-    <h2>AI Agents for Software Engineering</h2>
-    <p class="q"><span class="q-num">Q1.</span> How do we build a software-engineering agent that handles real, repository-scale tasks?</p>
-    <p class="q"><span class="q-num">Q2.</span> How does such an agent keep getting better &mdash; by mining knowledge from development history and its own trajectories?</p>
-    <a class="toggle" href="javascript:$('#lingxi-area ul.content').slideToggle();">Show/Hide Work on Lingxi</a>
+    <h2>Process Intelligence for Coding Agents</h2>
+    <p class="q"><span class="q-num">Q1.</span> What can a coding agent learn from the past, and how do we turn it into constraints and guidance?</p>
+    <p class="q"><span class="q-num">Q2.</span> How do we observe, evaluate and guide an agent as it works, and feed what we see back?</p>
+    <a class="toggle" href="javascript:$('#lingxi-area .pm-detail').slideToggle(); $('#lingxi-area .pm-summary').toggle();">Show/Hide Work on Process Intelligence</a>
   </div>
 
-  <!-- Connector from Lingxi main box down to the T-trunk (plain shaft — arrowheads
-       live at each tick-to-box junction below). -->
-  <div class="v-arrow shaft"></div>
-
-  <div class="subs-row cols-3">
-
-    <div class="sub-box">
-      <b>Dev Implicit Knowledge Mining</b>
-      <ul class="content">
-        <li>
-          <a class="proj" href="/publications/#yang2026lingxi">[Lingxi-Miner]</a>
-          <span class="proj-sub">procedural knowledge from historical dev data</span>
-        </li>
-      </ul>
-      <span class="flow-arrow" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 10" preserveAspectRatio="xMidYMid meet">
-          <line x1="0" y1="5" x2="14" y2="5" stroke="#e06b2a" stroke-width="2"/>
-          <polygon points="14,1 22,5 14,9" fill="#e06b2a"/>
-        </svg>
-      </span>
+  <!-- Process-intelligence map (HTML). Orange = trajectories in, and the evolution loop;
+       blue = how implicit knowledge reaches the agent. Show/Hide swaps each box's summary for its work list. -->
+  <div class="pm">
+    <div class="pm-top">
+      <div class="pm-agent">
+        <b>Coding agents</b>
+        <div class="pm-detail"><a class="proj" href="https://github.com/openJiuwen-ai/iCode" target="_blank" rel="noopener">[iCode]</a></div>
+      </div>
     </div>
 
-    <div class="sub-box">
-      <b>Code Agent Harness</b>
-      <ul class="content">
-        <li>
-          <a class="proj" href="https://github.com/lingxi-agent/Lingxi">[Lingxi-GH]</a>
-          <span class="proj-sub">#1 on SWE-bench Verified (81.2%)</span>
-        </li>
-        <li>
-          <a class="proj" href="https://github.com/lingxi-agent/Lingxi/blob/master/docs/Lingxi%20v2.0%20Technical%20Report%202026.pdf">[Lingxi-v2.0]</a>
-          <span class="proj-sub">agent architecture technical report</span>
-        </li>
-      </ul>
-      <span class="flow-arrow" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 10" preserveAspectRatio="xMidYMid meet">
-          <line x1="0" y1="5" x2="14" y2="5" stroke="#e06b2a" stroke-width="2"/>
-          <polygon points="14,1 22,5 14,9" fill="#e06b2a"/>
-        </svg>
-      </span>
+    <p class="pm-mobile-note"><span>↓ trajectories</span> · <span>↑ in-run guidance (in progress)</span> · <span>↓ pull knowledge</span></p>
+
+    <div class="pm-mid">
+      <div class="pm-col pm-col-left">
+        <div class="pm-seg pm-orange pm-down"><span class="pm-lab pm-lab-left">trajectories</span></div>
+      </div>
+      <div class="pm-col"></div>
+      <div class="pm-col pm-col-right">
+        <div class="pm-guide-stack">
+          <div class="pm-seg pm-blue pm-up"><span class="pm-lab pm-lab-left">proactive intervention</span></div>
+          <div class="pm-guide"><b>In-run guidance</b><span>in progress</span></div>
+          <div class="pm-seg pm-blue pm-up"></div>
+        </div>
+        <div class="pm-pull">
+          <div class="pm-seg pm-blue pm-down"><span class="pm-lab pm-lab-right">pull knowledge</span></div>
+        </div>
+      </div>
     </div>
 
-    <div class="sub-box">
-      <b>Model &amp; Loop Evolution <span class="tag-soon">results coming soon</span></b>
-      <ul class="content">
-        <li>
-          <span class="proj-na">[Traj-Evolver]</span>
-          <span class="proj-sub">trajectories &rarr; harness + model updates</span>
-        </li>
-      </ul>
-    </div>
+    <div class="pm-row">
+      <div class="sub-box pm-box">
+        <b>Analysis &amp; evaluation</b>
+        <ul class="pm-summary"><li>online &amp; offline trajectory analysis</li><li>step-level evaluation of each run</li></ul>
+        <div class="pm-detail">
+          <ul class="pm-list">
+            <li>
+              <span class="proj-na">[Failure and cause localization]</span>
+              <span class="proj-sub">in progress</span>
+            </li>
+            <li>
+              <a class="proj" href="https://github.com/spine-se-lab/eval-kit-swe-pro" target="_blank" rel="noopener">[eval-kit-swe-pro]</a>
+              <span class="proj-sub">SWE-bench Pro evaluation plugin</span>
+            </li>
+          </ul>
+        </div>
+      </div>
 
+      <div class="pm-loop">
+        <div class="pm-h pm-right"><span>mine</span></div>
+        <div class="pm-evo">
+          <svg viewBox="0 0 30 30" aria-hidden="true">
+            <path d="M 7.27 12.93 A 8 8 0 0 1 21.93 11.0" fill="none" stroke="#e06b2a" stroke-width="2.4"/>
+            <polygon points="23.93,14.46 23.68,8.83 19.18,11.43" fill="#e06b2a"/>
+            <path d="M 22.73 17.07 A 8 8 0 0 1 8.07 19.0" fill="none" stroke="#e06b2a" stroke-width="2.4"/>
+            <polygon points="6.07,15.54 6.32,21.17 10.82,18.57" fill="#e06b2a"/>
+          </svg>
+          <b>Evolution</b>
+        </div>
+        <div class="pm-h pm-left"><span>evaluate</span></div>
+      </div>
+
+      <div class="sub-box pm-box">
+        <b>Implicit knowledge <span class="pm-eg">e.g., constraints &amp; guidance</span></b>
+        <ul class="pm-summary"><li>experience from project history and agent runs</li><li>delivered on demand, or during a run</li></ul>
+        <div class="pm-detail">
+          <ul class="pm-list pm-two">
+            <li>
+              <a class="proj" href="/blog/lingxi/">[Lingxi]</a>
+              <span class="proj-sub">procedural knowledge from issue–patch history</span>
+            </li>
+            <li>
+              <a class="proj" href="/blog/stair/">[STAIR]</a>
+              <span class="proj-sub">repair recipes from agent trajectories</span>
+            </li>
+            <li>
+              <a class="proj" href="/blog/testgrad/">[TestGRAD]</a>
+              <span class="proj-sub">failure patterns from test outcomes</span>
+            </li>
+            <li>
+              <span class="proj-na">[Workflow mining]</span>
+              <span class="proj-sub">workflow structure from agent trajectories · in progress</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="feedback-loop">
-    <svg viewBox="0 0 1000 70" preserveAspectRatio="none" aria-hidden="true">
-      <!-- Curve from bottom-center of the rightmost sub-box, dipping down, up to
-           bottom-center of the leftmost sub-box -->
-      <path d="M 833 4 C 833 68 167 68 167 17"
-            stroke="#e06b2a" stroke-width="2.5" fill="none" stroke-linecap="round" />
-      <!-- Arrowhead tip pointing up, into the bottom border of the leftmost sub-box -->
-      <polygon points="159,17 167,2 175,17" fill="#e06b2a" />
-    </svg>
-    <p class="loop-note">
-      evolved knowledge feeds back into Dev Implicit Knowledge Mining &mdash; closing the data flywheel.
-    </p>
+  <!-- Project cards: one per experience source -->
+  <div class="pi-cards">
+    <div class="pi-card">
+      <span class="src">From issue–patch history</span>
+      <h3>Lingxi</h3>
+      <div class="venue">ISSTA 2026 · Distinguished Paper</div>
+      <p>Recovers the procedural knowledge behind a repository's historical issues, and uses it to guide analysis, planning and fixing on new issues.</p>
+      <div class="num">74.6%</div>
+      <div class="num-sub">SWE-bench Verified, Pass@1 · Claude 4 Sonnet</div>
+      <div class="links"><a href="/blog/lingxi/">Project page</a><a href="https://github.com/spine-se-lab/Lingxi-advisor" target="_blank" rel="noopener">Lingxi Advisor</a></div>
+    </div>
+    <div class="pi-card">
+      <span class="src">From agent trajectories</span>
+      <h3>STAIR</h3>
+      <div class="venue">Under review</div>
+      <p>Turns past repair trajectories into repair recipes at several granularities, and adapts the ones that fit into a plan for each stage of a new repair.</p>
+      <div class="num">81.2%</div>
+      <div class="num-sub">SWE-bench Verified, Pass@1 · MiniMax M2.5 · as of Mar 2026</div>
+      <div class="links"><a href="/blog/stair/">Project page</a></div>
+    </div>
+    <div class="pi-card">
+      <span class="src">From test outcomes</span>
+      <h3>TestGRAD</h3>
+      <div class="venue">Under review</div>
+      <p>Mines recurring failure patterns from test attempts to evolve the test suite until it tells candidate patches apart: test-time scaling for agent ensembles.</p>
+      <div class="num">84.2%</div>
+      <div class="num-sub">SWE-bench Verified, Pass@1 · 4-agent ensemble · as of May 2026</div>
+      <div class="links"><a href="/blog/testgrad/">Project page</a></div>
+    </div>
   </div>
 
 </div> <!-- /#lingxi-area -->
