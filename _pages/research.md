@@ -646,17 +646,17 @@ nav_order: 1
 </style>
 
 <!-- ================================================================== -->
-<!-- Tabs: Vulnerability Management  |  AI Agents for SE                  -->
+<!-- Tabs: Proactive Vulnerability Sensing  |  AI Agents for SE                  -->
 <!-- ================================================================== -->
 
 <div class="research-tabs">
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="lingxi" type="button">Process Intelligence for Coding Agents</button>
-    <button class="tab-btn" data-tab="vuln" type="button">OSS Vulnerability Management</button>
+    <button class="tab-btn" data-tab="vuln" type="button">Proactive Vulnerability Sensing</button>
   </div>
 
 <!-- ================================================================== -->
-<!-- Tab 1: OSS Vulnerability Management                                  -->
+<!-- Tab 1: Proactive Vulnerability Sensing                                  -->
 <!-- ================================================================== -->
 
 <div class="tab-panel" id="tab-vuln">
@@ -780,10 +780,10 @@ nav_order: 1
 
   <!-- Main box -->
   <div class="main-box">
-    <h2>OSS Vulnerability Management</h2>
+    <h2>Proactive Vulnerability Sensing</h2>
     <p class="q"><span class="q-num">Q1.</span> How can we detect a vulnerability <strong><em>before</em></strong> it is publicly disclosed?</p>
     <p class="q"><span class="q-num">Q2.</span> How do we manage that vulnerability with one hand tied behind our back &mdash; no public CVEs or advisories to draw on?</p>
-    <a class="toggle" href="javascript:$('#vuln-area ul.content').slideToggle();">Show/Hide Work on Vulnerability Management</a>
+    <a class="toggle" href="javascript:$('#vuln-area ul.content').slideToggle();">Show/Hide Work on Proactive Vulnerability Sensing</a>
   </div>
 
   <!-- Vertical arrow: OSS main box -> Empirical Understanding -->
@@ -812,7 +812,7 @@ nav_order: 1
   <div class="subs-row cols-3">
 
     <div class="sub-box">
-      <b>Proactive Sensing</b>
+      <b>Silent-Fix Detection</b>
       <ul class="content">
         <li>
           <a class="proj" href="/publications/#zhou2021finding">[VulFixMiner]</a>
@@ -884,7 +884,7 @@ nav_order: 1
       <ul class="content">
         <li>
           <a class="proj" href="/publications/#chen2026crossver">[Exploit-Applicability]</a>
-          <span class="proj-sub">which versions a disclosed exploit still reaches</span>
+          <span class="proj-sub">which versions an exploit still reaches</span>
         </li>
         <li>
           <a class="proj" href="/publications/#chen2026diffploit">[Diffploit]</a>

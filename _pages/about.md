@@ -76,7 +76,7 @@ social: false # includes social icons at the bottom of the page
 I am a **Senior Principal Researcher** at the **Waterloo Research Center, Huawei Canada**. Every software artifact (e.g., commits, issues, agent trajectories) records what was done, but rarely why. My team learns the why and puts it to work:
 
 - **[Process intelligence for coding agents](/research/#lingxi).** We mine historical issues, agent trajectories and test outcomes into constraints and guidance for the next run. Our work [Lingxi](/blog/lingxi/) received an ISSTA'26 *Distinguished Paper* award. <a class="more" href="/research/#lingxi">More details →</a>
-- **[OSS vulnerability management](/research/#vuln).** **Proactive sensing**: detecting silent fix commits **1–2 weeks before public disclosure**, a window that LLM-built exploits now close in days. <a class="more" href="/research/#vuln">More details →</a>
+- **[Proactive vulnerability sensing for open source](/research/#vuln).** We detect silent fix commits **1–2 weeks before public disclosure**, a window that LLM-built exploits now close in days, then assess, fix and validate them within that window. <a class="more" href="/research/#vuln">More details →</a>
 
 <div class="clear-float"></div>
 
