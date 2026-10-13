@@ -6,7 +6,11 @@ Run from the repo root:  python3 bin/sync_project_pages.py
 """
 import re
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from blog_chrome import add_sitebar  # noqa: E402
 
 PRES = Path.home() / "WorkSpace" / "Presentation"
 SITE = Path(__file__).resolve().parent.parent
@@ -14,8 +18,8 @@ OUT = SITE / "blog"   # pages are published under /blog/<name>/
 
 PAGES = {
     "lingxi": PRES / "ISSTA26-Lingxi" / "project-page",
-    "stair": PRES / "Traj-exp paper" / "project-page",
-    "testgrad": PRES / "TestGrad paper" / "project-page",
+    "stair": PRES / "STAIR" / "project-page",
+    "testgrad": PRES / "TestGRAD" / "project-page",
 }
 
 STAIR_ARXIV_TITLE = "Reusing Past Repairs Through Hierarchical Trajectory Abstraction for Coding Agents"
@@ -103,6 +107,15 @@ def patch_testgrad(s, lang):
 
 PATCHES = {"lingxi": patch_lingxi, "stair": patch_stair, "testgrad": patch_testgrad}
 
+# The project pages have their own fixed topbar (narrow screens) and left rail
+# (wide screens); both move down under the site header.
+PAGE_CSS = """
+  body { padding-top: var(--site-h); }
+  .topbar, .rail { top: var(--site-h); }
+  .section { scroll-margin-top: calc(var(--nav-h) + var(--site-h)); }
+"""
+
+
 for name, src in PAGES.items():
     dst = OUT / name
     dst.mkdir(parents=True, exist_ok=True)
@@ -111,5 +124,5 @@ for name, src in PAGES.items():
     shutil.copytree(src / "assets", dst / "assets")
     for fname, lang in (("index.html", "en"), ("index.zh.html", "zh")):
         if (src / fname).exists():
-            (dst / fname).write_text(PATCHES[name]((src / fname).read_text(), lang))
+            (dst / fname).write_text(add_sitebar(PATCHES[name]((src / fname).read_text(), lang), PAGE_CSS))
     print(f"synced {name} <- {src}")

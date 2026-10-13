@@ -9,7 +9,11 @@ Chinese page with an EN / 中文 switch (same convention as the project pages).
 Run from the repo root:  python3 bin/build_beyond_the_paper.py
 """
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from blog_chrome import add_sitebar  # noqa: E402
 
 SRC = Path.home() / "WorkSpace/Presentation/ISSTA26-Lingxi/decks/lingxi-issta2026-rev15-iCode-detailed.html"
 OUT = Path(__file__).resolve().parent.parent / "blog" / "coding-agent-toolkit"
@@ -390,7 +394,14 @@ html[lang="zh-Hans"] .tag, html[lang="zh-Hans"] .ec .src, html[lang="zh-Hans"] .
 </script>
 '''
     body = body.replace("</body>", extra + "</body>", 1)
-    return head + body
+    return add_sitebar(head + body, PAGE_CSS)
+
+
+# Room for the fixed site header; the phone detail sheets cover it.
+PAGE_CSS = """
+  html body { padding-top: calc(var(--site-h) + 20px); }
+  @media (max-width: 900px) { html body { padding-top: calc(var(--site-h) + 14px); } html .msheet { z-index: 200; } }
+"""
 
 
 OUT.mkdir(parents=True, exist_ok=True)
